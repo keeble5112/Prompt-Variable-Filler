@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt 变量填充器 Pro Max</title>
+    <!-- 注入同款蓝色底白字 P 的 SVG 图标作为网页 Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232563eb'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>P</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .sync-text-render {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            line-height: 1.625;
+            letter-spacing: normal;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        [contenteditable="true"]:empty:before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            pointer-events: none;
+            display: block;
+        }
+        [contenteditable="true"] { outline: none; }
+
+        .highlight-focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .highlight-var { cursor: help; }
+        
+        .clickable-var { cursor: pointer; transition: opacity 0.15s ease; }
+        .clickable-var:hover { opacity: 0.8; }
+
+        .global-tooltip {
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #ffffff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.2;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.35);
+            transition: opacity 0.15s ease;
+            z-index: 9999;
+            transform: translateX(-50%);
+        }
+        .global-tooltip.show { opacity: 1; visibility: visible; }
+
+        input:checked ~ .dot { transform: translateX(100%); }
+        input:checked ~ .toggle-bg { background-color: #3b82f6; }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ffffff;
+            width: 28px;
+            height: 28px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .selection-toolbar {
+            position: fixed;
+            transform: translateX(-50%);
+            z-index: 40;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: opacity 0.15s;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen font-sans overflow-hidden flex flex-col relative">
+
+    <!-- 全局消息提示容器 -->
+    <div id="toastContainer" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <header class="bg-white border-b border-slate-200 h-16 flex-shrink-0 flex items-center justify-between px-6 z-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg shadow-inner">P</div>
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Prompt <span class="font-normal">变量填充器</span></h1>
+            <span class="bg-slate-50 text-slate-500 text-xs px-2.5 py-1 rounded-md border border-slate-200 ml-2">专业工作流版</span>
+        </div>
+        
+        <div class="flex items-center gap-2 text-sm">
+            <button onclick="openApiSettings()" class="flex items-center gap-1.5 px-3 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                AI配置
+            </button>
+            <button onclick="openGranularityModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 font-medium rounded-lg transition-colors border border-purple-200 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                AI 自动提取
+            </button>
+            <label class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium rounded-lg transition-colors border border-blue-200 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                导入本地文件
+                <input type="file" id="fileInput" accept=".txt,.md,.json" class="hidden" onchange="handleFileUpload(event)">
+            </label>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-hidden p-4 lg:p-6 flex flex-col gap-4 lg:gap-6">
+        
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-shrink-0 max-h-[35vh]">
+            <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center">
+                    <span class="bg-indigo-100 text-indigo-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">1</span>
+                    <h3 class="font-semibold text-slate-700">变量控制台</h3>
+                </div>
+                <span class="text-xs text-slate-400">选中定位 / 悬浮移除 / 结果区点击可反向激活</span>
+            </div>
+            
+            <div id="vars-container" class="overflow-y-auto p-4 bg-slate-50/30">
+                <div class="flex items-center justify-center text-slate-400 text-sm italic py-4">
+                    在此处或划词提取变量，将以网格自动排列...
+                </div>
+            </div>
+        </section>
+
+        <section class="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6 min-h-0">
+            
+            <!-- 模板输入区 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2">
+                <div class="px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[52px]">
+                    <div class="flex items-center">
+                        <span class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">2</span>
+                        <h3 class="font-semibold text-slate-700">模板输入</h3>
+                        <span class="ml-3 text-xs text-slate-400 font-normal border-l border-slate-300 pl-3">划取文字可设为变量</span>
+                    </div>
+                    
+                    <label class="flex items-center cursor-pointer group">
+                        <span class="mr-2 text-xs font-medium text-slate-500 group-hover:text-slate-700 transition-colors">滚动同步</span>
+                        <div class="relative">
+                            <input type="checkbox" id="syncToggle" class="sr-only" checked onchange="toggleSync(this)">
+                            <div class="block bg-slate-300 w-9 h-5 rounded-full toggle-bg transition-colors duration-300"></div>
+                            <div class="dot absolute left-[2px] top-[2px] bg-white w-4 h-4 rounded-full transition transform duration-300 shadow-sm"></div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div 
+                    id="tpl" 
+                    contenteditable="true"
+                    class="flex-1 w-full bg-transparent p-5 text-slate-700 overflow-y-scroll text-sm sm:text-base sync-text-render relative"
+                    data-placeholder="在此处粘贴 Prompt 模板..." 
+                    oninput="handleTemplateInput()"></div>
+            </div>
+
+            <!-- 最终结果区 -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2 relative group">
+                <div class="px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[52px]">
+                    <div class="flex items-center">
+                        <span class="bg-emerald-100 text-emerald-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">3</span>
+                        <h3 class="font-semibold text-slate-700">最终结果</h3>
+                    </div>
+                    
+                    <button 
+                        onclick="copyResult()" 
+                        id="copyBtn"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span id="copyText">复制结果</span>
+                    </button>
+                </div>
+                
+                <div 
+                    id="res" 
+                    class="flex-1 overflow-y-scroll p-5 text-slate-700 cursor-text select-text text-sm sm:text-base sync-text-render"
+                ></div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- 划词悬浮菜单 -->
+    <div id="selectionToolbar" class="hidden selection-toolbar bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-slate-700 font-medium flex items-center gap-1.5 shadow-xl border border-slate-700" onmousedown="event.preventDefault(); openVarPromptModal();">
+        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+        设为变量
+    </div>
+
+    <!-- 提示框 -->
+    <div id="globalTooltip" class="global-tooltip"></div>
+
+    <!-- 自定义变量名输入弹窗 -->
+    <div id="varPromptModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] backdrop-blur-sm">
+        <div class="bg-white p-5 rounded-xl w-full max-w-sm shadow-2xl">
+            <h2 class="font-bold text-slate-800 mb-2">设定变量名</h2>
+            <p id="varPromptDesc" class="text-xs text-slate-500 mb-4 truncate"></p>
+            <input type="text" id="varPromptInput" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-4" placeholder="请输入中文变量名...">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeVarPromptModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+                <button onclick="confirmVarPrompt()" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 配置弹窗 -->
+    <div id="apiModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl w-96 shadow-2xl">
+            <h2 class="font-bold mb-4 text-sm text-slate-800 border-b pb-2">配置 AI 大模型</h2>
+            <div class="space-y-3 pt-2">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">接口地址 (Base URL)</label>
+                    <input type="text" id="apiBaseUrl" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">模型名称 (Model)</label>
+                    <input type="text" id="apiModelName" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">API Key</label>
+                    <input type="password" id="apiKey" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+                <button onclick="closeApiSettings()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+                <button onclick="saveApiSettings()" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提取颗粒度选择弹窗 -->
+    <div id="granularityModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
+            <h2 class="font-bold mb-4 text-base text-slate-800">选择 AI 提取颗粒度</h2>
+            <div class="space-y-3 mb-6">
+                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input type="radio" name="granularity" value="coarse" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4">
+                    <div>
+                        <div class="text-sm font-medium text-slate-700">粗粒度 (大概念层)</div>
+                        <div class="text-xs text-slate-500 mt-1">仅提取核心主体、核心环境等。</div>
+                    </div>
+                </label>
+                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors bg-purple-50/50 border-purple-200">
+                    <input type="radio" name="granularity" value="medium" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4" checked>
+                    <div>
+                        <div class="text-sm font-medium text-purple-900">中等粒度 (均衡模式)</div>
+                        <div class="text-xs text-purple-600/70 mt-1">提取主体、背景、关键动作和风格。</div>
+                    </div>
+                </label>
+                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input type="radio" name="granularity" value="fine" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4">
+                    <div>
+                        <div class="text-sm font-medium text-slate-700">细颗粒度 (高精拆解)</div>
+                        <div class="text-xs text-slate-500 mt-1">提取细节修饰词、颜色、材质、光影参数等。</div>
+                    </div>
+                </label>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeGranularityModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+                <button onclick="startAiExtraction()" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm font-medium flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    开始处理
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审查结果分组面板 -->
+    <div id="aiResultModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-xl">
+                <div>
+                    <h2 class="font-bold text-slate-800 text-lg">智能提取审查</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">取消勾选可直接过滤不需要的变量分组或独立变量</p>
+                </div>
+            </div>
+            <div id="aiResultContent" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 bg-slate-50/30"></div>
+            <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-white rounded-b-xl">
+                <button onclick="closeAiResultModal()" class="px-5 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">放弃更改</button>
+                <button onclick="applyAiSelection()" class="px-5 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm font-bold tracking-wide">应用选中变量</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 动态播报加载遮罩 -->
+    <div id="aiLoading" class="hidden fixed inset-0 bg-slate-900/80 flex flex-col items-center justify-center z-50 backdrop-blur-sm">
+        <div class="spinner mb-6"></div>
+        <div id="aiLoadingText" class="text-white text-[15px] font-medium tracking-widest transition-opacity duration-300">正在建立模型安全连接...</div>
+    </div>
+
+    <script>
+        const dom = {
+            tpl: document.getElementById('tpl'),
+            varsContainer: document.getElementById('vars-container'),
+            res: document.getElementById('res'),
+            copyBtn: document.getElementById('copyBtn'),
+            copyText: document.getElementById('copyText'),
+            globalTooltip: document.getElementById('globalTooltip'),
+            apiModal: document.getElementById('apiModal'),
+            apiBaseUrl: document.getElementById('apiBaseUrl'),
+            apiModelName: document.getElementById('apiModelName'),
+            apiKey: document.getElementById('apiKey'),
+            aiLoading: document.getElementById('aiLoading'),
+            aiLoadingText: document.getElementById('aiLoadingText'),
+            selectionToolbar: document.getElementById('selectionToolbar'),
+            granularityModal: document.getElementById('granularityModal'),
+            aiResultModal: document.getElementById('aiResultModal'),
+            aiResultContent: document.getElementById('aiResultContent'),
+            varPromptModal: document.getElementById('varPromptModal'),
+            varPromptDesc: document.getElementById('varPromptDesc'),
+            varPromptInput: document.getElementById('varPromptInput')
+        };
+
+        const state = {
+            lastVariables: [], 
+            plainTextResult: '',
+            isSyncingLeft: false,
+            isSyncingRight: false,
+            syncEnabled: true,
+            apiConfig: JSON.parse(localStorage.getItem('prompt_ai_config') || '{"baseUrl":"","model":"","key":""}'),
+            pendingAiData: [],
+            currentSelectionText: '' 
+        };
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-600' : 'bg-emerald-600';
+            toast.className = `${bgColor} text-white px-5 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 transform -translate-y-full opacity-0 pointer-events-auto`;
+            toast.innerText = message;
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('-translate-y-full', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('-translate-y-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        document.addEventListener('selectionchange', () => {
+            const sel = window.getSelection();
+            if (sel.isCollapsed || !dom.tpl.contains(sel.anchorNode)) {
+                dom.selectionToolbar.classList.add('hidden');
+                return;
+            }
+            const text = sel.toString().trim();
+            if (!text) return;
+            
+            state.currentSelectionText = text;
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            dom.selectionToolbar.style.top = `${rect.top - 38}px`;
+            dom.selectionToolbar.style.left = `${rect.left + (rect.width / 2)}px`;
+            dom.selectionToolbar.classList.remove('hidden');
+        });
+
+        function openVarPromptModal() {
+            dom.selectionToolbar.classList.add('hidden');
+            dom.varPromptDesc.innerText = `选中片段: "${state.currentSelectionText}"`;
+            dom.varPromptInput.value = '';
+            dom.varPromptModal.classList.remove('hidden');
+            setTimeout(() => dom.varPromptInput.focus(), 100); 
+        }
+
+        function closeVarPromptModal() {
+            dom.varPromptModal.classList.add('hidden');
+            state.currentSelectionText = '';
+        }
+
+        function confirmVarPrompt() {
+            const varName = dom.varPromptInput.value.trim();
+            if (!varName) {
+                showToast('变量名不能为空', 'error');
+                return;
+            }
+            
+            // 修复焦点丢失导致的替换失败：直接使用文本替换而非依赖光标选区
+            let currentText = dom.tpl.innerText;
+            // 确保只替换选中的那个字符串（使用 replace 而不是 replaceAll，防止误伤同名文本）
+            const newText = currentText.replace(state.currentSelectionText, `{${varName}}`);
+            dom.tpl.innerText = newText;
+            
+            updateVars({ [varName]: state.currentSelectionText });
+            closeVarPromptModal();
+        }
+
+        function openApiSettings() {
+            dom.apiBaseUrl.value = state.apiConfig.baseUrl;
+            dom.apiModelName.value = state.apiConfig.model;
+            dom.apiKey.value = state.apiConfig.key;
+            dom.apiModal.classList.remove('hidden');
+        }
+        function closeApiSettings() { dom.apiModal.classList.add('hidden'); }
+        function saveApiSettings() {
+            state.apiConfig = { baseUrl: dom.apiBaseUrl.value.trim(), model: dom.apiModelName.value.trim(), key: dom.apiKey.value.trim() };
+            localStorage.setItem('prompt_ai_config', JSON.stringify(state.apiConfig));
+            closeApiSettings();
+            showToast('API 配置已安全保存在本地。');
+        }
+
+        let loadingStepTimer;
+        const loadingSteps = [
+            "正在建立模型安全连接...",
+            "正在进行全文语义拆解...",
+            "正在提取并评估高价值变量...",
+            "正在执行变量结构化归类...",
+            "正在生成最终数据模型...",
+            "处理数据较大，请耐心稍候..."
+        ];
+
+        function openGranularityModal() {
+            const rawText = dom.tpl.innerText;
+            if (!rawText.trim()) return showToast('请先在左侧输入区粘贴需要提取的文本。', 'error');
+            if (!state.apiConfig.key) return openApiSettings();
+            dom.granularityModal.classList.remove('hidden');
+        }
+        function closeGranularityModal() { dom.granularityModal.classList.add('hidden'); }
+        function closeAiResultModal() { dom.aiResultModal.classList.add('hidden'); }
+
+        async function startAiExtraction() {
+            closeGranularityModal();
+            dom.aiLoading.classList.remove('hidden');
+            
+            let stepIndex = 0;
+            dom.aiLoadingText.innerText = loadingSteps[0];
+            dom.aiLoadingText.style.opacity = 1;
+            
+            loadingStepTimer = setInterval(() => {
+                stepIndex = Math.min(stepIndex + 1, loadingSteps.length - 1);
+                dom.aiLoadingText.style.opacity = 0; 
+                setTimeout(() => {
+                    dom.aiLoadingText.innerText = loadingSteps[stepIndex];
+                    dom.aiLoadingText.style.opacity = 1; 
+                }, 300); 
+            }, 1800);
+            
+            const rawText = dom.tpl.innerText;
+            const granularity = document.querySelector('input[name="granularity"]:checked').value;
+            
+            let ruleDetail = "";
+            if (granularity === 'coarse') {
+                ruleDetail = "仅提取最核心的主体、大背景大类概念。必须大幅度收敛，剔除所有无关紧要的形容词。";
+            } else if (granularity === 'medium') {
+                ruleDetail = "保持语义连贯，提取主体、背景、主要动作和关键风格。适度拆解，保留关键特征。";
+            } else {
+                ruleDetail = "尽最大可能提取文本中所有具备替换价值的描述词，将其抽象为变量。需涵盖主体、颜色、材质、风格、情感、光影等。";
+            }
+            
+            const systemPrompt = `作为提示词编排专家，请提取文本中的可变要素，并将其【结构化归类】。
+提取颗粒度要求：${ruleDetail}
+绝对规则：
+1. 提取出的变量名强制使用简练中文。
+2. 必须将这些变量合理归入几个大类组（例如：主体设定、环境场景、画风光影、细节服饰 等）。
+3. 绝对不要重写全文。只返回 JSON 数据。
+JSON 格式强制规范：
+{
+  "categories": [
+    {
+      "name": "分组名称（如：主体设定）",
+      "replacements": [{"original": "原文中的词或短语", "varName": "中文变量名"}]
+    }
+  ]
+}`;
+
+            try {
+                const response = await fetch(`${state.apiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiConfig.key}` },
+                    body: JSON.stringify({
+                        model: state.apiConfig.model,
+                        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: rawText }],
+                        response_format: { type: 'json_object' },
+                        temperature: 0.1
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                const data = await response.json();
+                const parsed = JSON.parse(data.choices[0].message.content);
+                
+                if (parsed.categories && Array.isArray(parsed.categories)) {
+                    state.pendingAiData = parsed.categories;
+                    renderAiResultModal();
+                } else {
+                    throw new Error('解析结构异常');
+                }
+            } catch (error) {
+                showToast('AI 归类解析失败，请检查 API 或换一个支持 json_object 的模型。', 'error');
+            } finally {
+                clearInterval(loadingStepTimer);
+                dom.aiLoading.classList.add('hidden');
+            }
+        }
+
+        function renderAiResultModal() {
+            let html = '';
+            state.pendingAiData.forEach((cat, cIdx) => {
+                if (!cat.replacements || cat.replacements.length === 0) return;
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                        <div class="bg-slate-100/50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                            <label class="font-bold text-slate-700 flex items-center gap-2.5 cursor-pointer">
+                                <input type="checkbox" checked class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded cursor-pointer" onchange="toggleCategoryGroup(${cIdx}, this.checked)">
+                                ${escapeHtml(cat.name)}
+                                <span class="bg-slate-200 text-slate-500 text-xs px-2 py-0.5 rounded-full font-normal">${cat.replacements.length} 项</span>
+                            </label>
+                        </div>
+                        <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            ${cat.replacements.map((rep, rIdx) => `
+                                <label class="flex items-start gap-2.5 p-2 rounded-md hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-100 transition-colors group">
+                                    <input type="checkbox" checked class="mt-0.5 w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded cursor-pointer item-checkbox cidx-${cIdx}" data-cidx="${cIdx}" data-ridx="${rIdx}">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium text-slate-700 text-sm group-hover:text-emerald-600 transition-colors">${escapeHtml(rep.varName)}</div>
+                                        <div class="text-xs text-slate-400 mt-0.5 truncate w-full" title="${escapeHtml(rep.original)}">“${escapeHtml(rep.original)}”</div>
+                                    </div>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            dom.aiResultContent.innerHTML = html;
+            dom.aiResultModal.classList.remove('hidden');
+        }
+
+        function toggleCategoryGroup(cIdx, isChecked) {
+            const checkboxes = dom.aiResultContent.querySelectorAll(`.cidx-${cIdx}`);
+            checkboxes.forEach(cb => cb.checked = isChecked);
+        }
+
+        function applyAiSelection() {
+            let newTemplate = dom.tpl.innerText || '';
+            let extractedVars = {};
+            
+            const checkboxes = dom.aiResultContent.querySelectorAll('.item-checkbox:checked');
+            checkboxes.forEach(cb => {
+                const cIdx = cb.getAttribute('data-cidx');
+                const rIdx = cb.getAttribute('data-ridx');
+                const item = state.pendingAiData[cIdx].replacements[rIdx];
+                
+                const varToken = `{${item.varName}}`;
+                newTemplate = newTemplate.replaceAll(item.original, varToken);
+                extractedVars[item.varName] = item.original;
+            });
+            
+            dom.tpl.innerText = newTemplate;
+            updateVars(extractedVars); 
+            closeAiResultModal();
+            showToast('变量抽取与归类应用成功！');
+        }
+
+        dom.tpl.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+        });
+        
+        function toggleSync(checkbox) { state.syncEnabled = checkbox.checked; }
+
+        const escapeHtml = (str) => {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        };
+        const generateSafeId = (name) => 'var_' + btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g, '');
+
+        function autoResizeVar(element) {
+            if (!element.value) { element.style.height = '38px'; return; }
+            element.style.height = 'auto';
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+
+        function removeVariable(rawName, safeId) {
+            const inputEl = document.getElementById(safeId);
+            const valToRestore = inputEl ? inputEl.value : '';
+            const token = `{${rawName}}`;
+            let tplText = dom.tpl.innerText || '';
+            tplText = tplText.replaceAll(token, valToRestore);
+            dom.tpl.innerText = tplText;
+            updateVars();
+        }
+
+        let typingTimer;
+        function handleTemplateInput() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => { updateVars(); }, 300);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('文件体积过大，请上传 2MB 以内的文本文件。', 'error');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                dom.tpl.innerText = e.target.result;
+                updateVars();
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function updateVars(prefillVariables = null) {
+            const tplText = dom.tpl.innerText || '';
+            const matches = [...new Set(tplText.match(/\{([^}]+)\}/g) || [])];
+            
+            const isSameVars = matches.length === state.lastVariables.length && 
+                               matches.every((val, index) => val === state.lastVariables[index]);
+            
+            if (isSameVars && !prefillVariables) {
+                renderResult();
+                return; 
+            }
+
+            state.lastVariables = matches;
+
+            if (matches.length === 0) {
+                dom.varsContainer.innerHTML = `<div class="flex items-center justify-center text-slate-400 text-sm italic py-4">未检测到 {变量}</div>`;
+                renderResult();
+                return;
+            }
+
+            const currentValues = {};
+            dom.varsContainer.querySelectorAll('textarea').forEach(input => {
+                currentValues[input.id] = input.value;
+            });
+
+            let htmlBuffer = '<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">';
+            
+            matches.forEach(m => {
+                const name = m.slice(1, -1);
+                const safeId = generateSafeId(name);
+                
+                let val = currentValues[safeId] || '';
+                if (prefillVariables && prefillVariables[name] !== undefined) {
+                    val = prefillVariables[name];
+                }
+                
+                const safeName = escapeHtml(name);
+                const safeVal = escapeHtml(val);
+                const rawNameSafe = safeName.replace(/'/g, "\\'");
+                
+                htmlBuffer += `
+                    <div class="group flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm transition-all focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 relative">
+                        <div class="flex justify-between items-center">
+                            <label class="font-medium text-slate-600 text-xs break-words">${safeName}</label>
+                            <button onclick="removeVariable('${rawNameSafe}', '${safeId}')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-0.5" title="点击取消该变量的设定">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <textarea 
+                            id="${safeId}" 
+                            class="w-full bg-slate-50 border border-slate-100 rounded-md p-1.5 text-sm text-slate-800 focus:outline-none focus:bg-white resize-none overflow-hidden transition-colors min-h-[38px]"
+                            rows="1"
+                            placeholder="输入内容..."
+                            oninput="autoResizeVar(this); renderResult()"
+                        >${safeVal}</textarea>
+                    </div>`;
+            });
+            
+            htmlBuffer += '</div>';
+            dom.varsContainer.innerHTML = htmlBuffer;
+            
+            requestAnimationFrame(() => {
+                dom.varsContainer.querySelectorAll('textarea').forEach(ta => {
+                    if (ta.value) { autoResizeVar(ta); } else { ta.style.height = '38px'; }
+                });
+            });
+            renderResult();
+        }
+
+        function renderResult() {
+            const rawTpl = dom.tpl.innerText || '';
+            let htmlResult = escapeHtml(rawTpl);
+            let plainResult = rawTpl;
+            
+            state.lastVariables.forEach(m => {
+                const name = m.slice(1, -1);
+                const safeId = generateSafeId(name);
+                const inputElement = document.getElementById(safeId);
+                const val = (inputElement && inputElement.value !== '') ? inputElement.value : m;
+                
+                plainResult = plainResult.replaceAll(m, val);
+
+                const safeToken = escapeHtml(m);
+                const safeVal = escapeHtml(val);
+                const safeName = escapeHtml(name);
+                
+                let highlightTag = '';
+                if (val !== m) {
+                    highlightTag = `<span class="bg-blue-100 text-blue-700 px-1 rounded font-medium mx-0.5 transition-all highlight-var clickable-var target-${safeId}" data-varname="${safeName}" data-target-id="${safeId}">${safeVal}</span>`;
+                } else {
+                    highlightTag = `<span class="bg-slate-200 text-slate-500 px-1 rounded mx-0.5 border border-slate-300 border-dashed clickable-var target-${safeId}" data-target-id="${safeId}">${safeToken}</span>`;
+                }
+                
+                htmlResult = htmlResult.replaceAll(safeToken, highlightTag);
+            });
+            
+            dom.res.innerHTML = htmlResult;
+            state.plainTextResult = plainResult;
+        }
+
+        function copyResult() {
+            if (!state.plainTextResult) return;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = state.plainTextResult;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            try {
+                document.execCommand('copy');
+                dom.copyBtn.classList.remove('bg-slate-800', 'hover:bg-slate-700');
+                dom.copyBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+                dom.copyText.innerText = '已复制!';
+                setTimeout(() => {
+                    dom.copyBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                    dom.copyBtn.classList.add('bg-slate-800', 'hover:bg-slate-700');
+                    dom.copyText.innerText = '复制结果';
+                }, 2000);
+            } catch (err) {
+                showToast('复制失败，请尝试换用现代浏览器。', 'error');
+            } finally {
+                document.body.removeChild(tempTextArea);
+            }
+        }
+
+        dom.res.addEventListener('click', function(e) {
+            const varEl = e.target.closest('.clickable-var');
+            if (varEl) {
+                const safeId = varEl.getAttribute('data-target-id');
+                if (safeId) {
+                    const inputEl = document.getElementById(safeId);
+                    if (inputEl) {
+                        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        inputEl.focus();
+                        inputEl.select();
+                    }
+                }
+            }
+        });
+
+        dom.res.addEventListener('mouseover', function(e) {
+            if (e.target.classList.contains('highlight-var')) {
+                const varName = e.target.getAttribute('data-varname');
+                dom.globalTooltip.innerText = varName;
+                dom.globalTooltip.classList.add('show');
+                const targetRect = e.target.getBoundingClientRect();
+                const tooltipHeight = dom.globalTooltip.offsetHeight;
+                let topPosition = targetRect.top - tooltipHeight - 6;
+                if (topPosition < 20) { topPosition = targetRect.bottom + 6; }
+                dom.globalTooltip.style.left = `${targetRect.left + (targetRect.width / 2)}px`;
+                dom.globalTooltip.style.top = `${topPosition}px`;
+            }
+        });
+
+        dom.res.addEventListener('mouseout', function(e) {
+            if (e.target.classList.contains('highlight-var')) { dom.globalTooltip.classList.remove('show'); }
+        });
+
+        dom.tpl.addEventListener('scroll', function() {
+            if (!state.syncEnabled) return;
+            if (!state.isSyncingLeft) {
+                state.isSyncingRight = true;
+                const maxScrollLeft = this.scrollHeight - this.clientHeight;
+                if (maxScrollLeft > 0) {
+                    const percentage = this.scrollTop / maxScrollLeft;
+                    const maxScrollRight = dom.res.scrollHeight - dom.res.clientHeight;
+                    dom.res.scrollTop = percentage * maxScrollRight;
+                }
+            }
+            state.isSyncingLeft = false;
+        });
+
+        dom.res.addEventListener('scroll', function() {
+            dom.globalTooltip.classList.remove('show');
+            if (!state.syncEnabled) return;
+            if (!state.isSyncingRight) {
+                state.isSyncingLeft = true;
+                const maxScrollRight = this.scrollHeight - this.clientHeight;
+                if (maxScrollRight > 0) {
+                    const percentage = this.scrollTop / maxScrollRight;
+                    const maxScrollLeft = dom.tpl.scrollHeight - dom.tpl.clientHeight;
+                    dom.tpl.scrollTop = percentage * maxScrollLeft;
+                }
+            }
+            state.isSyncingRight = false;
+        });
+    </script>
+</body>
+</html>
