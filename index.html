@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompt 变量填充器 Pro Max (稳定持久版)</title>
+    <title>Prompt 变量填充器 Pro Max (V30 浴火重生版)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232563eb'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>P</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -82,6 +82,10 @@
             .mobile-x-scroll::-webkit-scrollbar { display: none; }
             .mobile-x-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         }
+
+        .sidebar-expanded { width: 280px; opacity: 1; overflow-y: auto; }
+        .sidebar-collapsed { width: 0px; opacity: 0; overflow: hidden; border-width: 0; padding: 0; margin: 0; }
+        #sidebar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 h-screen font-sans overflow-hidden flex flex-col relative">
@@ -90,78 +94,129 @@
 
     <header class="bg-white border-b border-slate-200 min-h-[60px] sm:h-16 flex-shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-6 py-2 sm:py-0 z-10 shadow-sm gap-2 sm:gap-0">
         <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
+            <button onclick="toggleSidebar()" class="p-2 -ml-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none" title="收起/展开侧边栏">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
             <div class="flex items-center gap-2 sm:gap-3">
                 <div class="bg-blue-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-base sm:text-lg shadow-inner">P</div>
                 <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight whitespace-nowrap">Prompt <span class="font-normal hidden sm:inline">变量填充器</span></h1>
             </div>
-            <span class="bg-blue-50 text-blue-600 text-[10px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1 rounded-md border border-blue-200 sm:ml-2 whitespace-nowrap">V22 稳定持久版</span>
+            <span class="bg-emerald-50 text-emerald-600 text-[10px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1 rounded-md border border-emerald-200 sm:ml-2 whitespace-nowrap">V30 浴火重生版</span>
         </div>
         
         <div class="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm w-full sm:w-auto overflow-x-auto mobile-x-scroll pb-1 sm:pb-0">
             <button onclick="openApiSettings()" class="flex-shrink-0 flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium rounded-lg transition-colors">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                AI 安全配置
+                API 配置
             </button>
             <button onclick="openGranularityModal()" class="flex-shrink-0 flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 font-medium rounded-lg transition-colors border border-purple-200 shadow-sm">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                AI 自动提取
+                AI 提取
             </button>
             <label class="cursor-pointer flex-shrink-0 flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium rounded-lg transition-colors border border-blue-200 shadow-sm">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                导入本地文件
+                导入单文件
                 <input type="file" id="fileInput" accept=".txt,.md,.json" class="hidden" onchange="handleFileUpload(event)">
             </label>
         </div>
     </header>
 
-    <main class="flex-1 overflow-hidden p-2 sm:p-4 lg:p-6 flex flex-col gap-2 sm:gap-4 lg:gap-6">
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-shrink-0 max-h-[35vh]">
-            <div class="px-3 py-2 sm:px-5 sm:py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
-                <div class="flex items-center whitespace-nowrap">
-                    <span class="bg-indigo-100 text-indigo-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">1</span>
-                    <h3 class="font-semibold text-slate-700 text-sm sm:text-base">变量控制台</h3>
-                </div>
-            </div>
-            <div id="vars-container" class="overflow-y-auto p-2 sm:p-4 bg-slate-50/30">
-                <div class="flex items-center justify-center text-slate-400 text-xs sm:text-sm italic py-4">在此处或划词提取变量，将以网格自动排列...</div>
-            </div>
-        </section>
-
-        <section class="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 lg:gap-6 min-h-0">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2">
-                <div class="px-3 sm:px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[44px] sm:h-[52px]">
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">2</span>
-                        <h3 class="font-semibold text-slate-700 text-sm sm:text-base">模板输入</h3>
-                    </div>
-                    <label class="flex items-center cursor-pointer group ml-2">
-                        <span class="mr-1.5 sm:mr-2 text-[10px] sm:text-xs font-medium text-slate-500 group-hover:text-slate-700 transition-colors">滚动同步</span>
-                        <div class="relative">
-                            <input type="checkbox" id="syncToggle" class="sr-only" checked onchange="toggleSync(this)">
-                            <div class="block bg-slate-300 w-8 h-4 sm:w-9 sm:h-5 rounded-full toggle-bg transition-colors duration-300"></div>
-                            <div class="dot absolute left-[2px] top-[2px] bg-white w-3 h-3 sm:w-4 sm:h-4 rounded-full transition transform duration-300 shadow-sm"></div>
-                        </div>
-                    </label>
-                </div>
-                <div id="tpl" contenteditable="true" class="flex-1 w-full bg-transparent p-3 sm:p-5 text-slate-700 overflow-y-scroll text-[13px] sm:text-base sync-text-render relative" data-placeholder="在此处粘贴 Prompt 模板..." oninput="handleTemplateInput()"></div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2 relative group">
-                <div class="px-3 sm:px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[44px] sm:h-[52px]">
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="bg-emerald-100 text-emerald-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">3</span>
-                        <h3 class="font-semibold text-slate-700 text-sm sm:text-base">最终结果</h3>
-                    </div>
-                    <button onclick="copyResult()" id="copyBtn" class="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] sm:text-xs font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
-                        <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        <span id="copyText">复制结果</span>
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- 左侧文件夹列表侧边栏 -->
+        <aside id="sidebar" class="sidebar-expanded bg-white border-r border-slate-200 flex-shrink-0 flex flex-col z-10 custom-scrollbar shadow-[2px_0_8px_rgba(0,0,0,0.02)] relative">
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10">
+                <h3 class="font-bold text-slate-700 text-sm mb-3">本地 Prompt 库</h3>
+                <div class="flex gap-2">
+                    <button onclick="handleFolderImport()" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-lg transition-colors border border-slate-200 shadow-sm text-sm focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                        导入文件夹
+                    </button>
+                    <!-- 独立刷新按钮 -->
+                    <button onclick="refreshSidebarFolder(false)" class="flex-none px-2.5 py-2 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-lg transition-colors border border-slate-200 shadow-sm focus:outline-none" title="刷新文件夹读取最新内容">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                 </div>
-                <div id="res" class="flex-1 overflow-y-scroll p-3 sm:p-5 text-slate-700 cursor-text select-text text-[13px] sm:text-base sync-text-render"></div>
             </div>
-        </section>
-    </main>
+            <div id="fileListContainer" class="flex-1 overflow-y-auto pt-2 pb-6 px-1">
+                <div class="flex flex-col items-center justify-center text-slate-400 text-xs italic py-10 px-4 text-center">
+                    <svg class="w-8 h-8 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    点击上方按钮选择包含<br>.txt / .md / .json 文件的文件夹
+                </div>
+            </div>
+        </aside>
 
+        <!-- 主工作区 -->
+        <main class="flex-1 overflow-hidden p-2 sm:p-4 lg:p-6 flex flex-col gap-2 sm:gap-4 lg:gap-6 min-w-0 bg-slate-100">
+            <section class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-shrink-0 max-h-[35vh]">
+                <div class="px-3 py-2 sm:px-5 sm:py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
+                    <div class="flex items-center whitespace-nowrap">
+                        <span class="bg-indigo-100 text-indigo-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">1</span>
+                        <h3 class="font-semibold text-slate-700 text-sm sm:text-base">变量控制台</h3>
+                    </div>
+                </div>
+                <div id="vars-container" class="overflow-y-auto p-2 sm:p-4 bg-slate-50/30 custom-scrollbar">
+                    <div class="flex items-center justify-center text-slate-400 text-xs sm:text-sm italic py-4">在此处或划词提取变量，将以网格自动排列...</div>
+                </div>
+            </section>
+
+            <section class="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 lg:gap-6 min-h-0">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2">
+                    <div class="px-3 sm:px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[44px] sm:h-[52px]">
+                        <div class="flex items-center whitespace-nowrap">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">2</span>
+                            <h3 class="font-semibold text-slate-700 text-sm sm:text-base">模板输入</h3>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 sm:gap-3 ml-2">
+                            <button onclick="clearTemplate()" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors" title="清空内容">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                            <div class="w-px h-4 bg-slate-300 hidden sm:block"></div>
+                            <button onclick="openExportModal()" class="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded transition-colors border border-indigo-100">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                导出
+                            </button>
+                            <div class="w-px h-4 bg-slate-300 hidden sm:block"></div>
+                            <label class="flex items-center cursor-pointer group">
+                                <span class="mr-1.5 sm:mr-2 text-[10px] sm:text-xs font-medium text-slate-500 group-hover:text-slate-700 transition-colors">同步</span>
+                                <div class="relative">
+                                    <input type="checkbox" id="syncToggle" class="sr-only" checked onchange="toggleSync(this)">
+                                    <div class="block bg-slate-300 w-8 h-4 sm:w-9 sm:h-5 rounded-full toggle-bg transition-colors duration-300"></div>
+                                    <div class="dot absolute left-[2px] top-[2px] bg-white w-3 h-3 sm:w-4 sm:h-4 rounded-full transition transform duration-300 shadow-sm"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="tpl" contenteditable="true" class="flex-1 w-full bg-transparent p-3 sm:p-5 text-slate-700 overflow-y-scroll text-[13px] sm:text-base sync-text-render relative custom-scrollbar" data-placeholder="在此处粘贴 Prompt 模板..." oninput="handleTemplateInput()"></div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2 relative group">
+                    <div class="px-3 sm:px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[44px] sm:h-[52px]">
+                        <div class="flex items-center whitespace-nowrap">
+                            <span class="bg-emerald-100 text-emerald-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">3</span>
+                            <h3 class="font-semibold text-slate-700 text-sm sm:text-base">最终结果</h3>
+                        </div>
+                        <button onclick="copyResult()" id="copyBtn" class="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] sm:text-xs font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
+                            <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            <span id="copyText">复制结果</span>
+                        </button>
+                    </div>
+                    <div id="res" class="flex-1 overflow-y-scroll p-3 sm:p-5 text-slate-700 cursor-text select-text text-[13px] sm:text-base sync-text-render custom-scrollbar"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 右键菜单面板 -->
+    <div id="fileContextMenu" class="hidden fixed bg-white border border-slate-200 shadow-xl rounded-lg py-1.5 z-[100] text-sm min-w-[140px] transform transition-opacity duration-150">
+        <button onclick="executeDeleteFile()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            永久删除
+        </button>
+    </div>
+
+    <!-- 弹窗及悬浮组件 -->
     <div id="selectionToolbar" class="hidden selection-toolbar bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-slate-700 font-medium flex items-center gap-1.5 shadow-xl border border-slate-700" onmousedown="event.preventDefault(); openVarPromptModal();">
         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
         选区设为变量
@@ -187,7 +242,7 @@
                 配置 AI 大模型
                 <span class="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0.5 rounded">本地永久存储</span>
             </h2>
-            <p class="text-xs text-slate-500 mb-4 bg-slate-50 p-2 rounded">重要提示：API 凭据将长久保存在当前浏览器的本地缓存中，请勿在网吧等公共或不受信任的设备上进行配置。</p>
+            <p class="text-xs text-slate-500 mb-4 bg-slate-50 p-2 rounded">重要提示：API 凭据将长久保存在当前浏览器的本地缓存中，请勿在网吧等不受信任的设备上进行配置。</p>
             <div class="space-y-3 pt-2">
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1">接口地址 (Base URL)</label>
@@ -245,6 +300,37 @@
         </div>
     </div>
 
+    <!-- 导出确认弹窗 -->
+    <div id="exportModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
+            <h2 class="font-bold mb-4 text-base text-slate-800 border-b pb-2">导出带变量模板</h2>
+            <div class="space-y-4 pt-2 mb-6">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">文件名称预览（可修改）</label>
+                    <input type="text" id="exportFilenameInput" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">导出格式</label>
+                    <select id="exportFormatSelect" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                        <option value="md" selected>Markdown (.md)</option>
+                        <option value="txt">文本 (.txt)</option>
+                        <option value="json">数据模型 (.json)</option>
+                    </select>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded border border-slate-100 text-xs text-slate-500">
+                    将导出左侧模板区的内容，即保留大括号 `{变量名}` 的格式。
+                </div>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeExportModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+                <button onclick="executeExport()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    确认导出
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="aiResultModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh]">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-xl">
@@ -269,6 +355,9 @@
 
     <script>
         const dom = {
+            sidebar: document.getElementById('sidebar'),
+            fileListContainer: document.getElementById('fileListContainer'),
+            fileContextMenu: document.getElementById('fileContextMenu'),
             tpl: document.getElementById('tpl'),
             varsContainer: document.getElementById('vars-container'),
             res: document.getElementById('res'),
@@ -287,7 +376,10 @@
             aiResultContent: document.getElementById('aiResultContent'),
             varPromptModal: document.getElementById('varPromptModal'),
             varPromptDesc: document.getElementById('varPromptDesc'),
-            varPromptInput: document.getElementById('varPromptInput')
+            varPromptInput: document.getElementById('varPromptInput'),
+            exportModal: document.getElementById('exportModal'),
+            exportFilenameInput: document.getElementById('exportFilenameInput'),
+            exportFormatSelect: document.getElementById('exportFormatSelect')
         };
 
         const state = {
@@ -298,6 +390,14 @@
             syncEnabled: true,
             apiConfig: JSON.parse(localStorage.getItem('prompt_ai_config_secure') || '{"baseUrl":"","model":"","key":""}'),
             pendingAiData: [],
+            fileMetadata: null, 
+            localFolderFiles: [], 
+            dirHandle: null, 
+            isFallbackMode: false,
+            fileTree: [], 
+            nodeMap: {},  
+            expandedFolders: new Set(), 
+            contextMenuTarget: null, 
             currentSelectionText: '',
             abortController: null,
             savedRange: null 
@@ -306,12 +406,10 @@
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             const bgColor = type === 'error' ? 'bg-red-600' : 'bg-emerald-600';
-            toast.className = `${bgColor} text-white px-5 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 transform -translate-y-full opacity-0 pointer-events-auto`;
+            toast.className = `${bgColor} text-white px-5 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 transform -translate-y-full opacity-0 pointer-events-auto z-[10000]`;
             toast.innerText = message;
             document.getElementById('toastContainer').appendChild(toast);
-            
-            requestAnimationFrame(() => { toast.classList.remove('-translate-y-full', 'opacity-0'); });
-            
+            requestAnimationFrame(() => toast.classList.remove('-translate-y-full', 'opacity-0'));
             setTimeout(() => {
                 toast.classList.add('-translate-y-full', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
@@ -323,9 +421,358 @@
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
             return str.replace(/[&<>"']/g, m => map[m]);
         };
-        
         const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const generateSafeId = (name) => 'var_' + btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g, '');
+
+        function toggleSidebar() {
+            if (dom.sidebar.classList.contains('sidebar-expanded')) {
+                dom.sidebar.classList.replace('sidebar-expanded', 'sidebar-collapsed');
+            } else {
+                dom.sidebar.classList.replace('sidebar-collapsed', 'sidebar-expanded');
+            }
+        }
+
+        // ==========================
+        // 侧边栏与双重读写机制
+        // ==========================
+        async function handleFolderImport() {
+            if (!window.showDirectoryPicker) {
+                state.isFallbackMode = true;
+                const fallbackInput = document.createElement('input');
+                fallbackInput.type = 'file';
+                fallbackInput.webkitdirectory = true;
+                fallbackInput.multiple = true;
+                fallbackInput.onchange = (e) => {
+                    const files = Array.from(e.target.files).filter(f => /\.(txt|md|json)$/i.test(f.name));
+                    if (files.length === 0) return showToast('未找到支持的文本文件格式', 'error');
+                    
+                    buildFallbackTree(files);
+                    state.dirHandle = null; 
+                    renderSidebarFileList();
+                    if (dom.sidebar.classList.contains('sidebar-collapsed')) toggleSidebar();
+                    showToast(`已兼容加载 ${files.length} 个文件`);
+                };
+                fallbackInput.click();
+                return;
+            }
+
+            try {
+                const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); 
+                state.dirHandle = dirHandle;
+                state.isFallbackMode = false;
+                await refreshSidebarFolder(true);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    showToast('读取文件夹失败，请确保授予读写权限。', 'error');
+                }
+            }
+        }
+
+        function buildFallbackTree(files) {
+            const root = { children: [] };
+            state.nodeMap = {};
+            files.forEach(file => {
+                const parts = file.webkitRelativePath.split('/'); 
+                let current = root;
+                let currentPath = '';
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    currentPath += part + (i === parts.length - 1 ? '' : '/');
+                    if (i === parts.length - 1) {
+                        const node = { kind: 'file', name: part, path: currentPath, file };
+                        current.children.push(node);
+                        state.nodeMap[currentPath] = node;
+                    } else {
+                        let folder = current.children.find(c => c.name === part && c.kind === 'directory');
+                        if (!folder) {
+                            folder = { kind: 'directory', name: part, path: currentPath, children: [] };
+                            current.children.push(folder);
+                            state.nodeMap[currentPath] = folder;
+                        }
+                        current = folder;
+                    }
+                }
+            });
+            let tree = root.children;
+            if (tree.length === 1 && tree[0].kind === 'directory') tree = tree[0].children;
+            
+            function sortTree(nodes) {
+                nodes.sort((a, b) => {
+                    if (a.kind === b.kind) return a.name.localeCompare(b.name);
+                    return a.kind === 'directory' ? -1 : 1;
+                });
+                nodes.forEach(n => { if (n.children) sortTree(n.children); });
+            }
+            sortTree(tree);
+            state.fileTree = tree;
+        }
+
+        async function refreshSidebarFolder(isInitial = false) {
+            if (!state.dirHandle) {
+                if (!isInitial) showToast('兼容模式下无法无痕刷新，请重新点击导入', 'error');
+                return;
+            }
+
+            try {
+                state.nodeMap = {};
+                let fileCount = 0;
+
+                async function getTreeRecursively(dirHandle, parentHandle, currentPath = '') {
+                    const nodes = [];
+                    for await (const entry of dirHandle.values()) {
+                        const nodePath = currentPath + entry.name;
+                        if (entry.kind === 'file') {
+                            if (/\.(txt|md|json)$/i.test(entry.name)) {
+                                const file = await entry.getFile();
+                                const node = { kind: 'file', name: entry.name, path: nodePath, handle: entry, parentHandle, file };
+                                nodes.push(node);
+                                state.nodeMap[nodePath] = node;
+                                fileCount++;
+                            }
+                        } else if (entry.kind === 'directory') {
+                            const children = await getTreeRecursively(entry, entry, nodePath + '/');
+                            // 保留所有文件夹，不管是否为空
+                            const node = { kind: 'directory', name: entry.name, path: nodePath + '/', handle: entry, parentHandle, children };
+                            nodes.push(node);
+                            state.nodeMap[nodePath + '/'] = node;
+                        }
+                    }
+                    return nodes.sort((a, b) => {
+                        if (a.kind === b.kind) return a.name.localeCompare(b.name);
+                        return a.kind === 'directory' ? -1 : 1; 
+                    });
+                }
+
+                state.fileTree = await getTreeRecursively(state.dirHandle, state.dirHandle);
+
+                if (fileCount === 0 && isInitial) {
+                    showToast('该文件夹内未找到支持的文本文件，将显示空目录结构', 'error');
+                }
+
+                renderSidebarFileList();
+
+                if (dom.sidebar.classList.contains('sidebar-collapsed')) toggleSidebar();
+                
+                if (!isInitial) {
+                    showToast(`已同步本地硬盘，共读取 ${fileCount} 个文件`);
+                } else if (fileCount > 0) {
+                    showToast(`成功加载 ${fileCount} 个文件`);
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    showToast('刷新失败，请检查权限。', 'error');
+                }
+            }
+        }
+
+        function renderSidebarFileList() {
+            if (!state.fileTree || state.fileTree.length === 0) {
+                dom.fileListContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center text-slate-400 text-xs italic py-10 px-4 text-center">
+                    <svg class="w-8 h-8 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    当前目录为空或无支持的文本文件
+                </div>`;
+                return;
+            }
+            
+            function generateHTML(nodes, depth = 0) {
+                let html = '';
+                nodes.forEach(node => {
+                    const padding = 12 + depth * 14; 
+                    const safePath = escapeHtml(node.path).replace(/'/g, "\\'");
+                    
+                    if (node.kind === 'directory') {
+                        const isExpanded = state.expandedFolders.has(node.path);
+                        const caretRot = isExpanded ? 'rotate-90' : '';
+                        html += `
+                            <div class="w-full flex items-center justify-between px-2 py-1.5 hover:bg-slate-100 text-sm text-slate-700 rounded transition-colors group cursor-pointer" 
+                                 style="padding-left: ${padding}px" 
+                                 onclick="toggleFolder('${safePath}')"
+                                 oncontextmenu="showContextMenu(event, '${safePath}')">
+                                <div class="flex items-center gap-1.5 overflow-hidden">
+                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform ${caretRot}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+                                    <span class="truncate font-medium select-none text-slate-800">${escapeHtml(node.name)}</span>
+                                </div>
+                            </div>
+                        `;
+                        if (isExpanded && node.children) {
+                            html += generateHTML(node.children, depth + 1);
+                        }
+                    } else {
+                        const ext = node.name.split('.').pop().toLowerCase();
+                        let iconSvg = '';
+                        if (ext === 'json') iconSvg = `<svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>`;
+                        else if (ext === 'md') iconSvg = `<svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>`;
+                        else iconSvg = `<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>`;
+                        
+                        html += `
+                            <button class="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-blue-50 focus:bg-blue-50 text-sm text-slate-700 rounded transition-colors group border border-transparent focus:border-blue-200" 
+                                    style="padding-left: ${padding + 18}px"
+                                    onclick="loadSidebarFile('${safePath}')"
+                                    oncontextmenu="showContextMenu(event, '${safePath}')">
+                                ${iconSvg}
+                                <span class="truncate flex-1 text-left group-hover:text-blue-700 select-none">${escapeHtml(node.name)}</span>
+                            </button>
+                        `;
+                    }
+                });
+                return html;
+            }
+            
+            dom.fileListContainer.innerHTML = `<div class="space-y-0.5 pb-4 pt-1">${generateHTML(state.fileTree)}</div>`;
+        }
+
+        function toggleFolder(path) {
+            if (state.expandedFolders.has(path)) {
+                state.expandedFolders.delete(path);
+            } else {
+                state.expandedFolders.add(path);
+            }
+            renderSidebarFileList();
+        }
+
+        function loadSidebarFile(path) {
+            const node = state.nodeMap[path];
+            if (!node || !node.file) return;
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                let content = e.target.result;
+                if (node.name.endsWith('.json')) {
+                    try {
+                        const parsed = JSON.parse(content);
+                        if (parsed.template) content = parsed.template;
+                    } catch(err) {}
+                }
+                dom.tpl.innerText = content;
+                state.fileMetadata = null; 
+                updateVars();
+            };
+            reader.readAsText(node.file);
+        }
+
+        // ==========================
+        // 右键菜单与删除逻辑
+        // ==========================
+        function showContextMenu(e, path) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (state.isFallbackMode) {
+                showToast('兼容模式下无权限删除本地物理文件', 'error');
+                return;
+            }
+            
+            state.contextMenuTarget = state.nodeMap[path];
+            if (!state.contextMenuTarget) return;
+
+            dom.fileContextMenu.style.left = `${e.clientX}px`;
+            dom.fileContextMenu.style.top = `${e.clientY}px`;
+            dom.fileContextMenu.classList.remove('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!dom.fileContextMenu.contains(e.target)) {
+                dom.fileContextMenu.classList.add('hidden');
+            }
+        });
+
+        async function executeDeleteFile() {
+            dom.fileContextMenu.classList.add('hidden');
+            const target = state.contextMenuTarget;
+            if (!target || !target.parentHandle) return;
+            
+            if (target.handle === state.dirHandle) {
+                showToast('不能删除根目录本身', 'error');
+                return;
+            }
+            
+            const confirmMsg = target.kind === 'directory' 
+                ? `危险操作！\n\n确定要永久删除文件夹 "${target.name}" 及其包含的所有内容吗？此操作无法撤销。` 
+                : `确定要永久删除文件 "${target.name}" 吗？`;
+                
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                await target.parentHandle.removeEntry(target.name, { recursive: true });
+                showToast('文件已从您的本地硬盘中永久移除');
+                await refreshSidebarFolder(false); 
+            } catch (err) {
+                showToast('删除失败：可能文件被占用或无权限', 'error');
+            }
+        }
+
+        // ==========================
+        // 导出逻辑
+        // ==========================
+        function getFormattedDate() {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function openExportModal() {
+            const dateStr = getFormattedDate();
+            let cat = "未分类";
+            let sum = "Prompt模板";
+            
+            if (state.fileMetadata) {
+                if (state.fileMetadata.category) cat = state.fileMetadata.category.trim();
+                if (state.fileMetadata.summary) sum = state.fileMetadata.summary.trim();
+            }
+            
+            dom.exportFilenameInput.value = `${cat}-${sum}-${dateStr}`;
+            dom.exportModal.classList.remove('hidden');
+        }
+
+        function closeExportModal() { dom.exportModal.classList.add('hidden'); }
+
+        function executeExport() {
+            const filename = dom.exportFilenameInput.value.trim() || 'Prompt模板';
+            const format = dom.exportFormatSelect.value;
+            const content = dom.tpl.innerText;
+            
+            if (!content.trim()) return showToast('模板内容为空，无法导出。', 'error');
+
+            let exportData = content;
+            if (format === 'json') {
+                exportData = JSON.stringify({ template: content }, null, 2);
+            }
+
+            const blob = new Blob([exportData], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            
+            closeExportModal();
+            showToast('文件已成功导出。');
+        }
+
+        // ==========================
+        // 变量处理与核心业务逻辑
+        // ==========================
+        function clearTemplate() {
+            dom.tpl.innerText = '';
+            state.fileMetadata = null; 
+            updateVars();
+            showToast('已清空模板内容');
+        }
+
+        function removeVariable(rawName, safeId) {
+            const inputEl = document.getElementById(safeId);
+            const valToRestore = inputEl ? inputEl.value : '';
+            dom.tpl.innerText = (dom.tpl.innerText || '').replaceAll(`{${rawName}}`, valToRestore);
+            updateVars();
+        }
 
         dom.varsContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.remove-var-btn');
@@ -340,7 +787,7 @@
                 if (sel.rangeCount) {
                     sel.deleteFromDocument();
                     sel.getRangeAt(0).insertNode(document.createTextNode(text));
-                    selection.collapseToEnd();
+                    sel.collapseToEnd();
                     handleTemplateInput();
                 }
             }
@@ -422,7 +869,7 @@
         }
 
         let loadingStepTimer;
-        const loadingSteps = ["正在建立模型安全连接...", "正在进行全文语义拆解...", "正在提取并评估高价值变量...", "正在执行变量结构化归类...", "处理数据较大，请耐心稍候..."];
+        const loadingSteps = ["正在建立模型安全连接...", "正在进行全文语义拆解...", "正在提取并生成命名元数据...", "正在执行变量结构化归类...", "处理数据较大，请耐心稍候..."];
 
         function openGranularityModal() {
             const rawText = dom.tpl.innerText;
@@ -462,8 +909,17 @@
             const granularity = document.querySelector('input[name="granularity"]:checked').value;
             let ruleDetail = granularity === 'coarse' ? "大幅收敛，剔除修饰词。" : granularity === 'medium' ? "适度拆解，保留关键特征。" : "尽最大可能提取文本中所有描述词。";
             
-            const systemPrompt = `作为提示词专家，提取文本中可变要素并结构化归类。提取颗粒度要求：${ruleDetail}
-JSON 格式规范：{"categories": [{"name": "分组名", "replacements": [{"original": "原文词", "varName": "简练中文变量名"}]}]}`;
+            const systemPrompt = `作为提示词专家，请完成两项任务：
+1. 提取文本中可变要素并结构化归类。提取颗粒度要求：${ruleDetail}
+2. 根据文本内容，精准总结这个prompt的用途。
+JSON 格式绝对规范（必须包含 fileMetadata 和 categories）：
+{
+  "fileMetadata": {
+    "category": "提取2~5个字符的分类说明(如：生图、角色、文案等)",
+    "summary": "10个字以内的内容总结"
+  },
+  "categories": [{"name": "分组名", "replacements": [{"original": "原文词", "varName": "简练中文变量名"}]}]
+}`;
 
             try {
                 const response = await fetch(`${state.apiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
@@ -477,6 +933,10 @@ JSON 格式规范：{"categories": [{"name": "分组名", "replacements": [{"ori
                 const data = await response.json();
                 const parsed = JSON.parse(data.choices[0].message.content);
                 
+                if (parsed.fileMetadata) {
+                    state.fileMetadata = parsed.fileMetadata;
+                }
+
                 if (parsed.categories && Array.isArray(parsed.categories)) {
                     state.pendingAiData = parsed.categories;
                     renderAiResultModal();
@@ -549,7 +1009,7 @@ JSON 格式规范：{"categories": [{"name": "分组名", "replacements": [{"ori
             
             updateVars(extractedVars); 
             closeAiResultModal();
-            showToast('变量抽取与归类应用成功！');
+            showToast('变量抽取与命名分析成功！');
         }
 
         dom.tpl.addEventListener('paste', function(e) {
@@ -572,17 +1032,11 @@ JSON 格式规范：{"categories": [{"name": "分组名", "replacements": [{"ori
             element.style.height = (element.scrollHeight) + 'px';
         }
 
-        function removeVariable(rawName, safeId) {
-            const inputEl = document.getElementById(safeId);
-            const valToRestore = inputEl ? inputEl.value : '';
-            dom.tpl.innerText = (dom.tpl.innerText || '').replaceAll(`{${rawName}}`, valToRestore);
-            updateVars();
-        }
-
         let typingTimer;
         function handleTemplateInput() {
             clearTimeout(typingTimer);
             typingTimer = setTimeout(() => { updateVars(); }, 300);
+            state.fileMetadata = null; 
         }
 
         function handleFileUpload(event) {
@@ -590,7 +1044,16 @@ JSON 格式规范：{"categories": [{"name": "分组名", "replacements": [{"ori
             if (!file) return;
             if (file.size > 2 * 1024 * 1024) return showToast('文件需在 2MB 以内。', 'error');
             const reader = new FileReader();
-            reader.onload = function(e) { dom.tpl.innerText = e.target.result; updateVars(); event.target.value = ''; };
+            reader.onload = function(e) { 
+                let content = e.target.result;
+                if (file.name.endsWith('.json')) {
+                    try { const parsed = JSON.parse(content); if(parsed.template) content = parsed.template; } catch(err){}
+                }
+                dom.tpl.innerText = content; 
+                state.fileMetadata = null;
+                updateVars(); 
+                event.target.value = ''; 
+            };
             reader.readAsText(file);
         }
 
