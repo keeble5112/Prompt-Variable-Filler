@@ -40,7 +40,9 @@
 ### 方式二：本地部署/静态托管
 
 您可以将其部署到 GitHub Pages、Vercel 或 Netlify 上：
+```bash
 # 无需构建，直接托管 index.html 即可
+
 
 🛠️ AI 配置指南
 若要启用 AI 提取 功能：
