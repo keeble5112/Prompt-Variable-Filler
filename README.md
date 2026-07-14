@@ -41,7 +41,8 @@
 
 您可以将其部署到 GitHub Pages、Vercel 或 Netlify 上：**无需构建，直接托管 index.html 即可**
 
-🛠️ AI 配置指南
+---
+## 🛠️ AI 配置指南
 若要启用 AI 提取 功能：
 
 点击右上角的 API 配置。
