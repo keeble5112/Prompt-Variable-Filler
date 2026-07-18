@@ -51,6 +51,10 @@ Prompt 变量填充器是一款专为 AI 提示词创作者与高频使用者设
 * 在 Chrome、Edge 或 Opera 等 Blink 内核浏览器中，您可以直接导入本地文件夹，享受物理级的无痕刷新、无痛读取与右键永久删除功能。
 * 在旧版浏览器或不兼容的运行环境中，系统会自动降级为兼容文件树读取模式。
 
+## 在线演示
+
+欢迎访问 [项目在线演示地址](https://keeble5112.github.io/Prompt-Variable-Filler/)
+
 ## 开源协议
 
 本项目基于 MIT 协议开源。欢迎提交 Issue 或 Pull Request 来共同完善这个工具！
