@@ -328,7 +328,7 @@
             <div class="space-y-3 pt-2">
                 <div><label class="block text-xs font-medium text-slate-600 mb-1">接口地址 (Base URL)</label><input type="text" id="apiBaseUrl" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
                 <div><label class="block text-xs font-medium text-slate-600 mb-1">模型名称 (Model)</label><input type="text" id="apiModelName" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
-                <div><label class="block text-xs font-medium text-slate-600 mb-1">API Key</label><input type="password" id="apiKey" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1 flex justify-between"><span>API Key</span><span class="text-[10px] text-slate-400 font-normal">密钥仅加密存储在本地浏览器</span></label><input type="password" id="apiKey" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
             </div>
             <div class="mt-6 flex justify-end gap-2">
                 <button onclick="closeApiSettings()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
@@ -503,8 +503,18 @@
                     syncResults(); return;
                 }
 
+                let prefillById = null;
+                if (prefill) {
+                    prefillById = {};
+                    state.variables.forEach(v => {
+                        if (prefill[v.name] !== undefined) {
+                            prefillById[v.id] = prefill[v.name];
+                        }
+                    });
+                }
+
                 const curVals = {};
-                if (!prefill) this.viewport.querySelectorAll('textarea').forEach(t => { curVals[t.id] = t.value; });
+                if (!prefillById) this.viewport.querySelectorAll('textarea').forEach(t => { curVals[t.id] = t.value; });
 
                 const master = document.createElement('div');
                 master.style.display = 'block'; 
@@ -523,13 +533,13 @@
                     if (single.length) {
                         const sec = this._section('独立节点 (自动聚合)');
                         const grid = sec.querySelector('.var-section-grid');
-                        single.forEach(v => this._card(grid, v, curVals, true));
+                        single.forEach(v => this._card(grid, v, prefillById || curVals, true));
                         master.appendChild(sec);
                     }
                     for (let g in multi) {
                         const sec = this._section(`节点: ${g}`);
                         const grid = sec.querySelector('.var-section-grid');
-                        multi[g].forEach(v => this._card(grid, v, curVals, true));
+                        multi[g].forEach(v => this._card(grid, v, prefillById || curVals, true));
                         master.appendChild(sec);
                     }
                 } else {
@@ -537,7 +547,7 @@
                     wrapper.className = 'var-section-wrapper plain-text-wrapper';
                     const grid = document.createElement('div');
                     grid.className = 'var-section-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 pb-0';
-                    state.variables.forEach(v => this._card(grid, v, prefill || curVals, false));
+                    state.variables.forEach(v => this._card(grid, v, prefillById || curVals, false));
                     wrapper.appendChild(grid);
                     master.appendChild(wrapper);
                 }
@@ -601,7 +611,15 @@
                 btn.className = 'ellipsis-btn hidden absolute items-center justify-center transition-all cursor-pointer';
                 btn.title = '展开全屏编辑';
                 btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
+                btn.setAttribute('role', 'button');
+                btn.tabIndex = 0;
                 btn.addEventListener('click', (e) => { e.stopPropagation(); window.openLongTextModal(v.id, v.name); });
+                btn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        window.openLongTextModal(v.id, v.name);
+                    }
+                });
 
                 inpWrap.appendChild(ta);
                 inpWrap.appendChild(btn);
@@ -1022,7 +1040,12 @@
             reader.onload = function(e) {
                 let content = e.target.result;
                 if (file.name.endsWith('.json')) {
-                    try { const parsed = JSON.parse(content); if (parsed.template) content = parsed.template; } catch (err) {}
+                    try { 
+                        const parsed = JSON.parse(content); 
+                        if (parsed.template) content = parsed.template; 
+                    } catch (err) {
+                        showToast('JSON解析失败，已按纯文本处理', 'error');
+                    }
                 }
                 tplEditor.setValue(content);
                 state.fileMetadata = null;
