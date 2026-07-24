@@ -1,82 +1,146 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompt 变量填充器 Pro Max (V31 全面统计版)</title>
+    <title>Prompt 变量填充器 Pro Max (V60 极致对齐版)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232563eb'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>P</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+
     <style>
+        :root {
+            --dynamic-wrapper-h: 141px;
+            --dynamic-grid-h: 104px;
+            --collapsed-section-h: 225px;
+        }
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        .sync-text-render {
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        .CodeMirror {
+            height: 100% !important;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif !important;
+            font-size: 14px;
+            background: transparent;
+            color: #334155;
+            position: absolute;
+            top: 0; bottom: 0; left: 0; right: 0;
             line-height: 1.625;
-            letter-spacing: normal;
-            word-wrap: break-word;
-            white-space: pre-wrap;
+        }
+        .CodeMirror.is-json-mode {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+            line-height: 1.5;
         }
         
-        [contenteditable="true"]:empty:before {
-            content: attr(data-placeholder);
-            color: #94a3b8;
-            pointer-events: none;
-            display: block;
-        }
-        [contenteditable="true"] { outline: none; }
-
-        .highlight-var { cursor: help; }
-        .clickable-var { cursor: pointer; transition: opacity 0.15s ease; }
-        .clickable-var:hover { opacity: 0.8; }
+        .CodeMirror-gutters { background-color: #f8fafc; border-right: 1px solid #e2e8f0; }
+        .CodeMirror-linenumber { color: #94a3b8; padding-right: 12px; }
+        
+        .highlight-var { cursor: help; background-color: #dbeafe; color: #1d4ed8; font-weight: 500; border-radius: 4px; padding: 0 4px; transition: opacity 0.15s ease; }
+        .highlight-var:hover { opacity: 0.8; }
+        
+        .original-var { cursor: pointer; background-color: #e2e8f0; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 0 4px; transition: opacity 0.15s ease; }
+        .original-var:hover { opacity: 0.8; }
 
         .global-tooltip {
-            position: fixed;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: #ffffff;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            line-height: 1.2;
-            white-space: nowrap;
-            pointer-events: none;
-            opacity: 0;
-            visibility: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.35);
-            transition: opacity 0.15s ease;
-            z-index: 9999;
-            transform: translateX(-50%);
+            position: fixed; background-color: rgba(0, 0, 0, 0.7); color: #ffffff; padding: 4px 8px;
+            border-radius: 6px; font-size: 12px; line-height: 1.2; white-space: nowrap; pointer-events: none;
+            opacity: 0; visibility: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.35); transition: opacity 0.15s ease; z-index: 9999; transform: translateX(-50%);
         }
         .global-tooltip.show { opacity: 1; visibility: visible; }
 
         input:checked ~ .dot { transform: translateX(100%); }
         input:checked ~ .toggle-bg { background-color: #3b82f6; }
 
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid #ffffff;
-            width: 28px;
-            height: 28px;
-            animation: spin 1s linear infinite;
+        .spinner { border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top: 3px solid #ffffff; width: 28px; height: 28px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .selection-toolbar { position: fixed; transform: translateX(-50%); z-index: 40; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: opacity 0.15s; }
+
+        #vars-section { 
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; flex-direction: column;
+            min-height: 0;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        body.vars-collapsed #vars-section { flex: 0 0 var(--collapsed-section-h); max-height: var(--collapsed-section-h); }
+        body.vars-expanded #vars-section { flex: 0 1 auto; max-height: 2000px; }
+        
+        #bottom-section { 
+            transition: flex-basis 0.4s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.4s ease; 
+            display: flex; 
+            min-height: 0; 
+        }
+        body.vars-collapsed #bottom-section { flex: 1 1 0%; }
+        body.vars-expanded #bottom-section { flex: 1 1 auto; min-height: 54px; } 
+
+        .var-section-wrapper {
+            transition: max-height 0.4s ease, opacity 0.4s ease, margin-bottom 0.4s ease;
+            overflow: hidden; border: 1px solid #e2e8f0; border-radius: 0.5rem; background-color: #fff;
         }
         
-        .selection-toolbar {
-            position: fixed;
-            transform: translateX(-50%);
-            z-index: 40;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: opacity 0.15s;
+        .plain-text-wrapper {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        .plain-text-wrapper .var-section-grid {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 4px !important;
+        }
+
+        .var-scroll-viewport { height: 100%; scroll-behavior: smooth; }
+        body.vars-collapsed .var-scroll-viewport { overflow-y: hidden; }
+        body.vars-expanded .var-scroll-viewport { overflow-y: auto; }
+
+        body.vars-collapsed .var-section-wrapper { max-height: var(--dynamic-wrapper-h); margin-bottom: 16px !important; flex-shrink: 0; }
+        body.vars-collapsed .var-section-wrapper:last-child { margin-bottom: 0 !important; }
+        body.vars-expanded .var-section-wrapper { max-height: 5000px; margin-bottom: 16px; }
+        body.vars-expanded .var-section-wrapper:last-child { margin-bottom: 0; }
+
+        .var-section-grid { transition: max-height 0.4s ease; }
+        body.vars-collapsed .var-section-grid { max-height: var(--dynamic-grid-h); overflow-y: hidden; padding-bottom: 12px; }
+        body.vars-expanded .var-section-grid { max-height: 5000px; padding-bottom: 12px; }
+
+        .var-input-area {
+            line-height: 20px !important; padding-top: 6px !important; padding-bottom: 6px !important;
+            padding-right: 36px !important;
+            height: 32px !important; min-height: 32px !important; max-height: 32px !important; 
+            box-sizing: border-box !important; overflow-y: hidden !important; resize: none; background: transparent;
         }
         
+        .var-input-area::-webkit-scrollbar { width: 3px; }
+        .var-input-area::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+        .var-input-area:hover::-webkit-scrollbar-thumb { background: #cbd5e1; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+        .ellipsis-btn {
+            right: 6px;
+            top: 16px;
+            transform: translateY(-50%);
+            height: 19px;
+            padding: 0 10px;
+            background-color: rgba(226, 232, 240, 0.65);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 9999px;
+            color: #64748b;
+            z-index: 10;
+        }
+        .ellipsis-btn:hover {
+            background-color: rgba(203, 213, 225, 0.85);
+            color: #2563eb;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+        }
 
         @media (max-width: 640px) {
             .mobile-x-scroll::-webkit-scrollbar { display: none; }
@@ -88,22 +152,21 @@
         #sidebar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 h-screen font-sans overflow-hidden flex flex-col relative">
+<body class="bg-slate-100 text-slate-800 h-screen font-sans overflow-hidden flex flex-col relative vars-collapsed">
 
     <div id="toastContainer" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
     <header class="bg-white border-b border-slate-200 min-h-[60px] sm:h-16 flex-shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-6 py-2 sm:py-0 z-10 shadow-sm gap-2 sm:gap-0">
         <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
-            <button onclick="toggleSidebar()" class="p-2 -ml-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none" title="收起/展开侧边栏">
+            <button onclick="toggleSidebar()" class="p-2 -ml-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div class="flex items-center gap-2 sm:gap-3">
                 <div class="bg-blue-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-base sm:text-lg shadow-inner">P</div>
                 <h1 class="text-lg sm:text-xl font-bold text-slate-800 tracking-tight whitespace-nowrap">Prompt <span class="font-normal hidden sm:inline">变量填充器</span></h1>
             </div>
-            <span class="bg-emerald-50 text-emerald-600 text-[10px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1 rounded-md border border-emerald-200 sm:ml-2 whitespace-nowrap">V31 全面统计版</span>
+            <span class="bg-emerald-50 text-emerald-600 text-[10px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1 rounded-md border border-emerald-200 sm:ml-2 whitespace-nowrap">V60 极致对齐版</span>
         </div>
-        
         <div class="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm w-full sm:w-auto overflow-x-auto mobile-x-scroll pb-1 sm:pb-0">
             <button onclick="openApiSettings()" class="flex-shrink-0 flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-medium rounded-lg transition-colors">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
@@ -115,59 +178,61 @@
             </button>
             <label class="cursor-pointer flex-shrink-0 flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium rounded-lg transition-colors border border-blue-200 shadow-sm">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                导入单文件
+                导入文件
                 <input type="file" id="fileInput" accept=".txt,.md,.json" class="hidden" onchange="handleFileUpload(event)">
             </label>
         </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-        
-        <!-- 左侧文件夹列表侧边栏 -->
         <aside id="sidebar" class="sidebar-expanded bg-white border-r border-slate-200 flex-shrink-0 flex flex-col z-10 custom-scrollbar shadow-[2px_0_8px_rgba(0,0,0,0.02)] relative">
             <div class="p-4 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10">
                 <h3 class="font-bold text-slate-700 text-sm mb-3">本地 Prompt 库</h3>
                 <div class="flex gap-2">
                     <button onclick="handleFolderImport()" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-lg transition-colors border border-slate-200 shadow-sm text-sm focus:outline-none">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
                         导入文件夹
                     </button>
-                    <!-- 独立刷新按钮 -->
-                    <button onclick="refreshSidebarFolder(false)" class="flex-none px-2.5 py-2 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-lg transition-colors border border-slate-200 shadow-sm focus:outline-none" title="刷新文件夹读取最新内容">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <button onclick="refreshSidebarFolder(false)" class="flex-none px-2.5 py-2 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-lg transition-colors border border-slate-200 shadow-sm focus:outline-none">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                 </div>
             </div>
             <div id="fileListContainer" class="flex-1 overflow-y-auto pt-2 pb-6 px-1">
                 <div class="flex flex-col items-center justify-center text-slate-400 text-xs italic py-10 px-4 text-center">
-                    <svg class="w-8 h-8 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <svg class="w-8 h-8 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     点击上方按钮选择包含<br>.txt / .md / .json 文件的文件夹
                 </div>
             </div>
         </aside>
 
-        <!-- 主工作区 -->
         <main class="flex-1 overflow-hidden p-2 sm:p-4 lg:p-6 flex flex-col gap-2 sm:gap-4 lg:gap-6 min-w-0 bg-slate-100">
-            <section class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-shrink-0 max-h-[35vh]">
-                <div class="px-3 py-2 sm:px-5 sm:py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
+            <section id="vars-section" class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative">
+                <div id="vars-header" class="px-3 py-2 sm:px-5 sm:py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[52px]">
                     <div class="flex items-center whitespace-nowrap">
                         <span class="bg-indigo-100 text-indigo-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">1</span>
-                        <h3 class="font-semibold text-slate-700 text-sm sm:text-base">变量控制台</h3>
+                        <h3 class="font-semibold text-slate-700 text-sm sm:text-base">全局变量控制台</h3>
                     </div>
+                    <button onclick="toggleVarsExpand()" id="expandVarsBtn" class="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1 bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 text-[10px] sm:text-xs font-medium rounded border border-slate-200 shadow-sm transition-colors focus:outline-none">
+                        <svg id="expandIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                        <span id="expandText">展开面板</span>
+                    </button>
                 </div>
-                <div id="vars-container" class="overflow-y-auto p-2 sm:p-4 bg-slate-50/30 custom-scrollbar">
-                    <div class="flex items-center justify-center text-slate-400 text-xs sm:text-sm italic py-4">在此处或划词提取变量，将以网格自动排列...</div>
+                <div id="vars-container" class="p-4 bg-slate-50/30 relative flex-1 min-h-0 custom-scrollbar">
+                    <div class="var-scroll-viewport">
+                        <div class="flex items-center justify-center text-slate-400 text-xs sm:text-sm italic py-4">在此处或划词提取变量...</div>
+                    </div>
                 </div>
             </section>
 
-            <section class="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 lg:gap-6 min-h-0">
+            <section id="bottom-section" class="flex flex-col lg:flex-row gap-2 sm:gap-4 lg:gap-6 min-h-0 relative">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2 relative group">
                     <div class="px-3 sm:px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[44px] sm:h-[52px]">
-                        <div class="flex items-center whitespace-nowrap">
-                            <span class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">2</span>
-                            <h3 class="font-semibold text-slate-700 text-sm sm:text-base">模板输入</h3>
+                        <div class="flex items-center whitespace-nowrap min-w-0">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex flex-shrink-0 items-center justify-center text-xs font-bold mr-2">2</span>
+                            <h3 class="font-semibold text-slate-700 text-sm sm:text-base flex-shrink-0">底层数据输入</h3>
+                            <div id="tplCounter" class="ml-2 sm:ml-3 text-[9px] sm:text-[11px] text-slate-500 bg-white border border-slate-200 px-1.5 sm:px-2 py-0.5 rounded-md font-medium tracking-wide shadow-sm whitespace-nowrap">0 字符 | ~0 Tokens</div>
                         </div>
-                        
                         <div class="flex items-center gap-2 sm:gap-3 ml-2">
                             <button onclick="clearTemplate()" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors" title="清空内容">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -188,47 +253,53 @@
                             </label>
                         </div>
                     </div>
-                    <div id="tpl" contenteditable="true" class="flex-1 w-full bg-transparent p-3 sm:p-5 pb-10 text-slate-700 overflow-y-scroll text-[13px] sm:text-base sync-text-render relative custom-scrollbar" data-placeholder="在此处粘贴 Prompt 模板..." oninput="handleTemplateInput()"></div>
-                    
-                    <!-- 浮动字数与 Token 预估面板 -->
-                    <div id="tplCounter" class="absolute bottom-3 right-4 sm:right-6 text-[10px] sm:text-xs text-slate-400 bg-white/80 backdrop-blur-sm px-2.5 py-1 rounded shadow-sm border border-slate-100 pointer-events-none z-10 font-medium tracking-wide transition-opacity">0 字符 | ~0 Tokens</div>
+                    <div id="tplContainer" class="flex-1 relative w-full h-full bg-slate-50/50">
+                        <textarea id="tpl" class="hidden"></textarea>
+                    </div>
                 </div>
-
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden w-full lg:w-1/2 relative group">
                     <div class="px-3 sm:px-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0 h-[44px] sm:h-[52px]">
-                        <div class="flex items-center whitespace-nowrap">
-                            <span class="bg-emerald-100 text-emerald-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">3</span>
-                            <h3 class="font-semibold text-slate-700 text-sm sm:text-base">最终结果</h3>
+                        <div class="flex items-center whitespace-nowrap min-w-0">
+                            <span class="bg-emerald-100 text-emerald-600 rounded-full w-5 h-5 flex flex-shrink-0 items-center justify-center text-xs font-bold mr-2">3</span>
+                            <h3 class="font-semibold text-slate-700 text-sm sm:text-base flex-shrink-0">动态结果输出</h3>
+                            <div id="resCounter" class="ml-2 sm:ml-3 text-[9px] sm:text-[11px] text-slate-500 bg-white border border-slate-200 px-1.5 sm:px-2 py-0.5 rounded-md font-medium tracking-wide shadow-sm whitespace-nowrap">0 字符 | ~0 Tokens</div>
                         </div>
-                        <button onclick="copyResult()" id="copyBtn" class="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] sm:text-xs font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
-                            <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <button onclick="copyResult()" id="copyBtn" class="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] sm:text-xs font-medium rounded transition-colors focus:outline-none">
+                            <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             <span id="copyText">复制结果</span>
                         </button>
                     </div>
-                    <div id="res" class="flex-1 overflow-y-scroll p-3 sm:p-5 pb-10 text-slate-700 cursor-text select-text text-[13px] sm:text-base sync-text-render custom-scrollbar"></div>
-                    
-                    <!-- 浮动字数与 Token 预估面板 -->
-                    <div id="resCounter" class="absolute bottom-3 right-4 sm:right-6 text-[10px] sm:text-xs text-slate-400 bg-white/80 backdrop-blur-sm px-2.5 py-1 rounded shadow-sm border border-slate-100 pointer-events-none z-10 font-medium tracking-wide transition-opacity">0 字符 | ~0 Tokens</div>
+                    <div id="resContainer" class="flex-1 relative w-full h-full bg-slate-50/50">
+                        <textarea id="res" class="hidden"></textarea>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- 右键菜单面板 -->
-    <div id="fileContextMenu" class="hidden fixed bg-white border border-slate-200 shadow-xl rounded-lg py-1.5 z-[100] text-sm min-w-[140px] transform transition-opacity duration-150">
-        <button onclick="executeDeleteFile()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            永久删除
-        </button>
+    <!-- Modals -->
+    <div id="longTextModal" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[110] backdrop-blur-sm p-4 sm:p-6">
+        <div class="bg-white rounded-xl shadow-2xl flex flex-col w-full max-w-3xl max-h-[85vh]">
+            <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-xl">
+                <h2 class="font-bold text-slate-800 text-base" id="longTextModalTitle">编辑变量</h2>
+                <button onclick="closeLongTextModal()" class="text-slate-400 hover:text-slate-600 focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="flex-1 p-5 overflow-hidden flex flex-col min-h-[300px]">
+                <textarea id="longTextInput" class="w-full flex-1 border border-slate-200 rounded-lg p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none custom-scrollbar" placeholder="在此输入长文本内容..."></textarea>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-3 rounded-b-xl">
+                <button onclick="closeLongTextModal()" class="px-5 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">取消</button>
+                <button onclick="saveLongText()" class="px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm font-bold tracking-wide transition-colors">确认保存</button>
+            </div>
+        </div>
     </div>
 
-    <!-- 弹窗及悬浮组件 -->
     <div id="selectionToolbar" class="hidden selection-toolbar bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-slate-700 font-medium flex items-center gap-1.5 shadow-xl border border-slate-700" onmousedown="event.preventDefault(); openVarPromptModal();">
         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
         选区设为变量
     </div>
-
-    <div id="globalTooltip" class="global-tooltip"></div>
 
     <div id="varPromptModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] backdrop-blur-sm">
         <div class="bg-white p-5 rounded-xl w-full max-w-sm shadow-2xl">
@@ -242,30 +313,26 @@
         </div>
     </div>
 
+    <div id="fileContextMenu" class="hidden fixed bg-white border border-slate-200 shadow-xl rounded-lg py-1.5 z-[100] text-sm min-w-[140px] transform transition-opacity duration-150">
+        <button onclick="executeDeleteFile()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            永久删除
+        </button>
+    </div>
+
+    <div id="globalTooltip" class="global-tooltip"></div>
+
     <div id="apiModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-xl w-96 shadow-2xl">
-            <h2 class="font-bold mb-2 text-sm text-slate-800 border-b pb-2 flex items-center gap-2">
-                配置 AI 大模型
-                <span class="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0.5 rounded">本地永久存储</span>
-            </h2>
-            <p class="text-xs text-slate-500 mb-4 bg-slate-50 p-2 rounded">重要提示：API 凭据将长久保存在当前浏览器的本地缓存中，请勿在网吧等不受信任的设备上进行配置。</p>
+            <h2 class="font-bold mb-2 text-sm text-slate-800 border-b pb-2 flex items-center gap-2">配置 AI 大模型</h2>
             <div class="space-y-3 pt-2">
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">接口地址 (Base URL)</label>
-                    <input type="text" id="apiBaseUrl" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">模型名称 (Model)</label>
-                    <input type="text" id="apiModelName" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">API Key</label>
-                    <input type="password" id="apiKey" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" autocomplete="off">
-                </div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">接口地址 (Base URL)</label><input type="text" id="apiBaseUrl" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">模型名称 (Model)</label><input type="text" id="apiModelName" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">API Key</label><input type="password" id="apiKey" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:outline-none"></div>
             </div>
             <div class="mt-6 flex justify-end gap-2">
                 <button onclick="closeApiSettings()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
-                <button onclick="saveApiSettings()" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm">保存并生效</button>
+                <button onclick="saveApiSettings()" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg">保存并生效</button>
             </div>
         </div>
     </div>
@@ -274,81 +341,38 @@
         <div class="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
             <h2 class="font-bold mb-4 text-base text-slate-800">选择 AI 提取颗粒度</h2>
             <div class="space-y-3 mb-6">
-                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
-                    <input type="radio" name="granularity" value="coarse" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4">
-                    <div>
-                        <div class="text-sm font-medium text-slate-700">粗粒度 (大概念层)</div>
-                        <div class="text-xs text-slate-500 mt-1">仅提取核心主体、核心环境等。</div>
-                    </div>
-                </label>
-                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors bg-purple-50/50 border-purple-200">
-                    <input type="radio" name="granularity" value="medium" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4" checked>
-                    <div>
-                        <div class="text-sm font-medium text-purple-900">中等粒度 (均衡模式)</div>
-                        <div class="text-xs text-purple-600/70 mt-1">提取主体、背景、关键动作和风格。</div>
-                    </div>
-                </label>
-                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
-                    <input type="radio" name="granularity" value="fine" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4">
-                    <div>
-                        <div class="text-sm font-medium text-slate-700">细颗粒度 (高精拆解)</div>
-                        <div class="text-xs text-slate-500 mt-1">提取细节修饰词、颜色、材质、光影参数等。</div>
-                    </div>
-                </label>
+                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"><input type="radio" name="granularity" value="coarse" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4"><div><div class="text-sm font-medium text-slate-700">粗粒度 (大概念层)</div><div class="text-xs text-slate-500 mt-1">仅提取核心主体、核心环境等。</div></div></label>
+                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors bg-purple-50/50 border-purple-200"><input type="radio" name="granularity" value="medium" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4" checked><div><div class="text-sm font-medium text-purple-900">中等粒度 (均衡模式)</div><div class="text-xs text-purple-600/70 mt-1">提取主体、背景、关键动作和风格。</div></div></label>
+                <label class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"><input type="radio" name="granularity" value="fine" class="mt-1 text-purple-600 focus:ring-purple-500 h-4 w-4"><div><div class="text-sm font-medium text-slate-700">细颗粒度 (高精拆解)</div><div class="text-xs text-slate-500 mt-1">提取细节修饰词、颜色、材质、光影参数等。</div></div></label>
             </div>
             <div class="flex justify-end gap-2">
                 <button onclick="closeGranularityModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
-                <button onclick="startAiExtraction()" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm font-medium flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    开始处理
-                </button>
+                <button onclick="startAiExtraction()" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg">开始处理</button>
             </div>
         </div>
     </div>
 
-    <!-- 导出确认弹窗 -->
     <div id="exportModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
-            <h2 class="font-bold mb-4 text-base text-slate-800 border-b pb-2">导出带变量模板</h2>
+            <h2 class="font-bold mb-4 text-base text-slate-800 border-b pb-2">导出文件</h2>
             <div class="space-y-4 pt-2 mb-6">
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">文件名称预览（可修改）</label>
-                    <input type="text" id="exportFilenameInput" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">导出格式</label>
-                    <select id="exportFormatSelect" class="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                        <option value="md" selected>Markdown (.md)</option>
-                        <option value="txt">文本 (.txt)</option>
-                        <option value="json">数据模型 (.json)</option>
-                    </select>
-                </div>
-                <div class="bg-slate-50 p-2.5 rounded border border-slate-100 text-xs text-slate-500">
-                    将导出左侧模板区的内容，即保留大括号 `{变量名}` 的格式。
-                </div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">文件名称预览</label><input type="text" id="exportFilenameInput" class="w-full border border-slate-300 rounded-md p-2 text-sm outline-none"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">导出格式</label><select id="exportFormatSelect" class="w-full border border-slate-300 rounded-md p-2 text-sm outline-none bg-white"><option value="md" selected>Markdown (.md)</option><option value="json">数据模型 (.json)</option><option value="txt">纯文本 (.txt)</option></select></div>
             </div>
             <div class="flex justify-end gap-2">
                 <button onclick="closeExportModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
-                <button onclick="executeExport()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    确认导出
-                </button>
+                <button onclick="executeExport()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">确认导出</button>
             </div>
         </div>
     </div>
 
     <div id="aiResultModal" class="hidden fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh]">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-xl">
-                <div>
-                    <h2 class="font-bold text-slate-800 text-lg">智能提取审查</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">取消勾选可直接过滤不需要的变量分组或独立变量</p>
-                </div>
-            </div>
-            <div id="aiResultContent" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 bg-slate-50/30"></div>
-            <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-white rounded-b-xl">
-                <button onclick="closeAiResultModal()" class="px-5 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">放弃更改</button>
-                <button onclick="applyAiSelection()" class="px-5 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm font-bold tracking-wide">应用选中变量</button>
+            <div class="px-6 py-4 border-b flex justify-between items-center"><h2 class="font-bold text-slate-800 text-lg">提取审查</h2></div>
+            <div id="aiResultContent" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
+            <div class="px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="closeAiResultModal()" class="px-5 py-2 text-sm text-slate-600 bg-slate-100 rounded-lg">放弃更改</button>
+                <button onclick="applyAiSelection()" class="px-5 py-2 text-sm bg-emerald-600 text-white rounded-lg">应用选中变量</button>
             </div>
         </div>
     </div>
@@ -360,13 +384,22 @@
     </div>
 
     <script>
+    (function() {
+        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const generateSafeId = (name) => 'var_' + btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g, '');
+
+        function estimateTokens(text) {
+            if (!text) return 0;
+            const cjk = (text.match(/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g) || []).length;
+            return Math.ceil((cjk * 1.5) + ((text.length - cjk) / 4));
+        }
+
         const dom = {
             sidebar: document.getElementById('sidebar'),
             fileListContainer: document.getElementById('fileListContainer'),
             fileContextMenu: document.getElementById('fileContextMenu'),
-            tpl: document.getElementById('tpl'),
             varsContainer: document.getElementById('vars-container'),
-            res: document.getElementById('res'),
             copyBtn: document.getElementById('copyBtn'),
             copyText: document.getElementById('copyText'),
             globalTooltip: document.getElementById('globalTooltip'),
@@ -374,903 +407,903 @@
             apiBaseUrl: document.getElementById('apiBaseUrl'),
             apiModelName: document.getElementById('apiModelName'),
             apiKey: document.getElementById('apiKey'),
-            aiLoading: document.getElementById('aiLoading'),
-            aiLoadingText: document.getElementById('aiLoadingText'),
-            selectionToolbar: document.getElementById('selectionToolbar'),
             granularityModal: document.getElementById('granularityModal'),
             aiResultModal: document.getElementById('aiResultModal'),
             aiResultContent: document.getElementById('aiResultContent'),
-            varPromptModal: document.getElementById('varPromptModal'),
-            varPromptDesc: document.getElementById('varPromptDesc'),
-            varPromptInput: document.getElementById('varPromptInput'),
             exportModal: document.getElementById('exportModal'),
             exportFilenameInput: document.getElementById('exportFilenameInput'),
             exportFormatSelect: document.getElementById('exportFormatSelect'),
             tplCounter: document.getElementById('tplCounter'),
-            resCounter: document.getElementById('resCounter')
+            resCounter: document.getElementById('resCounter'),
+            selectionToolbar: document.getElementById('selectionToolbar'),
+            varPromptModal: document.getElementById('varPromptModal'),
+            varPromptDesc: document.getElementById('varPromptDesc'),
+            varPromptInput: document.getElementById('varPromptInput'),
+            aiLoading: document.getElementById('aiLoading'),
+            aiLoadingText: document.getElementById('aiLoadingText'),
+            longTextModal: document.getElementById('longTextModal'),
+            longTextInput: document.getElementById('longTextInput'),
+            longTextModalTitle: document.getElementById('longTextModalTitle')
         };
 
         const state = {
-            lastVariables: [], 
-            plainTextResult: '',
-            isSyncingLeft: false,
-            isSyncingRight: false,
-            syncEnabled: true,
+            inputType: 'text', jsonAst: null, variables: [], lastVariables: [], plainTextResult: '',
             apiConfig: JSON.parse(localStorage.getItem('prompt_ai_config_secure') || '{"baseUrl":"","model":"","key":""}'),
-            pendingAiData: [],
-            fileMetadata: null, 
-            localFolderFiles: [], 
-            dirHandle: null, 
-            isFallbackMode: false,
-            fileTree: [], 
-            nodeMap: {},  
-            expandedFolders: new Set(), 
-            contextMenuTarget: null, 
-            currentSelectionText: '',
-            abortController: null,
-            savedRange: null 
+            syncEnabled: true, fileTree: [], nodeMap: {}, expandedFolders: new Set(),
+            contextMenuTarget: null, dirHandle: null, isFallbackMode: false, currentSelectionText: '',
+            pendingAiData: [], abortController: null, fileMetadata: null, isApplyingAi: false,
+            isVarsExpanded: false, currentEditingVarId: null
         };
 
-        function showToast(message, type = 'success') {
+        let tplEditor, resEditor, isSyncingLeft = false, isSyncingRight = false;
+
+        function showToast(msg, type = 'success') {
             const toast = document.createElement('div');
-            const bgColor = type === 'error' ? 'bg-red-600' : 'bg-emerald-600';
-            toast.className = `${bgColor} text-white px-5 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 transform -translate-y-full opacity-0 pointer-events-auto z-[10000]`;
-            toast.innerText = message;
+            toast.className = `${type === 'error' ? 'bg-red-600' : 'bg-emerald-600'} text-white px-5 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 transform -translate-y-full opacity-0 pointer-events-auto z-[10000]`;
+            toast.innerText = msg;
             document.getElementById('toastContainer').appendChild(toast);
             requestAnimationFrame(() => toast.classList.remove('-translate-y-full', 'opacity-0'));
-            setTimeout(() => {
-                toast.classList.add('-translate-y-full', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            setTimeout(() => { toast.classList.add('-translate-y-full', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        const escapeHtml = (str) => {
-            if (typeof str !== 'string') return '';
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-            return str.replace(/[&<>"']/g, m => map[m]);
-        };
-        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const generateSafeId = (name) => 'var_' + btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g, '');
+        const VarPanel = {
+            viewport: null,
+            isScrolling: false,
 
-        // 字符数与 Token 估算引擎
-        function estimateTokens(text) {
-            if (!text) return 0;
-            const cjkRegex = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g;
-            const cjkCount = (text.match(cjkRegex) || []).length;
-            const otherCount = text.length - cjkCount;
-            return Math.ceil((cjkCount * 1.5) + (otherCount / 4));
-        }
+            init() {
+                this.viewport = dom.varsContainer.querySelector('.var-scroll-viewport');
+                if (!this.viewport) {
+                    this.viewport = document.createElement('div');
+                    this.viewport.className = 'var-scroll-viewport';
+                    dom.varsContainer.appendChild(this.viewport);
+                }
+                this._setupNodeScroll();
+            },
 
-        function updateCounters() {
-            const tplText = dom.tpl.innerText || '';
-            const tplChars = tplText.length;
-            const tplTokens = estimateTokens(tplText);
-            dom.tplCounter.innerText = `${tplChars} 字符 | ~${tplTokens} Tokens`;
+            updateCollapsedHeight() {
+                if (state.isVarsExpanded) {
+                    document.getElementById('vars-section').style.maxHeight = '';
+                    return;
+                }
 
-            const resText = state.plainTextResult || '';
-            const resChars = resText.length;
-            const resTokens = estimateTokens(resText);
-            dom.resCounter.innerText = `${resChars} 字符 | ~${resTokens} Tokens`;
-        }
-
-        function toggleSidebar() {
-            if (dom.sidebar.classList.contains('sidebar-expanded')) {
-                dom.sidebar.classList.replace('sidebar-expanded', 'sidebar-collapsed');
-            } else {
-                dom.sidebar.classList.replace('sidebar-collapsed', 'sidebar-expanded');
-            }
-        }
-
-        // ==========================
-        // 侧边栏与双重读写机制
-        // ==========================
-        async function handleFolderImport() {
-            if (!window.showDirectoryPicker) {
-                state.isFallbackMode = true;
-                const fallbackInput = document.createElement('input');
-                fallbackInput.type = 'file';
-                fallbackInput.webkitdirectory = true;
-                fallbackInput.multiple = true;
-                fallbackInput.onchange = (e) => {
-                    const files = Array.from(e.target.files).filter(f => /\.(txt|md|json)$/i.test(f.name));
-                    if (files.length === 0) return showToast('未找到支持的文本文件格式', 'error');
+                const firstWrapper = this.viewport.querySelector('.var-section-wrapper');
+                if (firstWrapper) {
+                    const isPlainText = firstWrapper.classList.contains('plain-text-wrapper');
+                    const header = isPlainText ? null : firstWrapper.children[0];
+                    const grid = isPlainText ? firstWrapper.children[0] : firstWrapper.children[1];
+                    const card = grid ? grid.querySelector('.group') : null;
                     
-                    buildFallbackTree(files);
-                    state.dirHandle = null; 
-                    renderSidebarFileList();
-                    if (dom.sidebar.classList.contains('sidebar-collapsed')) toggleSidebar();
-                    showToast(`已兼容加载 ${files.length} 个文件`);
-                };
-                fallbackInput.click();
-                return;
-            }
+                    if (grid && card) {
+                        const gridStyle = window.getComputedStyle(grid);
+                        const pt = parseFloat(gridStyle.paddingTop) || 0;
+                        const pb = parseFloat(gridStyle.paddingBottom) || 0;
+                        
+                        const gridExactHeight = pt + card.offsetHeight + pb;
+                        const headerExactHeight = header ? header.getBoundingClientRect().height : 0;
+                        const borderOffset = isPlainText ? 0 : 4; 
+                        const wrapperExactHeight = headerExactHeight + gridExactHeight + borderOffset;
+                        
+                        document.documentElement.style.setProperty('--dynamic-wrapper-h', wrapperExactHeight + 'px');
+                        document.documentElement.style.setProperty('--dynamic-grid-h', (gridExactHeight + 2) + 'px');
+                    }
+                }
 
-            try {
-                const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); 
-                state.dirHandle = dirHandle;
-                state.isFallbackMode = false;
-                await refreshSidebarFolder(true);
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    showToast('读取文件夹失败，请确保授予读写权限。', 'error');
+                const mainHeader = document.getElementById('vars-header');
+                const dynamicWrapperH = parseFloat(document.documentElement.style.getPropertyValue('--dynamic-wrapper-h')) || 141;
+                const totalHeight = mainHeader.offsetHeight + 32 + dynamicWrapperH; 
+                
+                document.documentElement.style.setProperty('--collapsed-section-h', totalHeight + 'px');
+            },
+
+            render(prefill = null) {
+                if (!this.viewport) this.init();
+                this.viewport.innerHTML = '';
+                if (state.variables.length === 0) {
+                    this.viewport.innerHTML = '<div class="flex items-center justify-center text-slate-400 text-sm italic py-4">未检测到结构化变量...</div>';
+                    syncResults(); return;
+                }
+
+                const curVals = {};
+                if (!prefill) this.viewport.querySelectorAll('textarea').forEach(t => { curVals[t.id] = t.value; });
+
+                const master = document.createElement('div');
+                master.style.display = 'block'; 
+
+                if (state.inputType === 'json') {
+                    const groups = {};
+                    state.variables.forEach(v => {
+                        if (!groups[v.group]) groups[v.group] = [];
+                        groups[v.group].push(v);
+                    });
+                    const single = [], multi = {};
+                    for (let g in groups) {
+                        if (groups[g].length === 1) single.push(groups[g][0]);
+                        else multi[g] = groups[g];
+                    }
+                    if (single.length) {
+                        const sec = this._section('独立节点 (自动聚合)');
+                        const grid = sec.querySelector('.var-section-grid');
+                        single.forEach(v => this._card(grid, v, curVals, true));
+                        master.appendChild(sec);
+                    }
+                    for (let g in multi) {
+                        const sec = this._section(`节点: ${g}`);
+                        const grid = sec.querySelector('.var-section-grid');
+                        multi[g].forEach(v => this._card(grid, v, curVals, true));
+                        master.appendChild(sec);
+                    }
+                } else {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'var-section-wrapper plain-text-wrapper';
+                    const grid = document.createElement('div');
+                    grid.className = 'var-section-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 pb-0';
+                    state.variables.forEach(v => this._card(grid, v, prefill || curVals, false));
+                    wrapper.appendChild(grid);
+                    master.appendChild(wrapper);
+                }
+                this.viewport.appendChild(master);
+                syncResults();
+                setTimeout(() => this.updateCollapsedHeight(), 50);
+            },
+
+            _section(title) {
+                const sec = document.createElement('div');
+                sec.className = 'var-section-wrapper';
+                const hdr = document.createElement('div');
+                hdr.className = 'bg-slate-50 px-4 py-2 flex justify-between items-center cursor-pointer hover:bg-slate-100 border-b border-slate-100';
+                hdr.onclick = function() { window.toggleGroupVisibility(this); };
+                hdr.innerHTML = `<div class="font-bold text-slate-700 text-sm">${escapeHtml(title)}</div><svg class="chevron-icon w-4 h-4 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+                const grid = document.createElement('div');
+                grid.className = 'var-section-grid p-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 bg-white';
+                sec.appendChild(hdr);
+                sec.appendChild(grid);
+                return sec;
+            },
+
+            _card(container, v, vals, isJson) {
+                const card = document.createElement('div');
+                card.className = 'group flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 relative';
+                
+                if (v.bgColor) {
+                    card.style.backgroundColor = v.bgColor;
+                } else {
+                    card.classList.add('bg-white');
+                }
+
+                const lblDiv = document.createElement('div');
+                lblDiv.className = 'flex justify-between items-center';
+                const lbl = document.createElement('label');
+                lbl.className = 'font-medium text-slate-600 text-xs truncate w-full pr-4';
+                lbl.title = v.path; lbl.textContent = v.name;
+                lblDiv.appendChild(lbl);
+                card.appendChild(lblDiv);
+
+                const inpWrap = document.createElement('div');
+                inpWrap.className = 'relative w-full';
+                const ta = document.createElement('textarea');
+                ta.id = v.id;
+                ta.className = 'var-input-area w-full border border-slate-100 rounded-md p-1.5 text-sm text-slate-800 focus:outline-none resize-none';
+                
+                if (v.bgColor) {
+                    ta.style.backgroundColor = 'rgba(255,255,255,0.6)';
+                } else {
+                    ta.classList.add('bg-slate-50', 'focus:bg-white');
+                }
+
+                ta.rows = 1; ta.placeholder = '输入...';
+                let val = v.value;
+                if (!isJson && vals && vals[v.id] !== undefined) val = vals[v.id];
+                else if (isJson && vals && vals[v.id] !== undefined) val = vals[v.id];
+                ta.value = val ?? '';
+                ta.addEventListener('input', () => { autoResizeVar(ta); syncResults(); });
+
+                const btn = document.createElement('button');
+                btn.className = 'ellipsis-btn hidden absolute items-center justify-center transition-all cursor-pointer';
+                btn.title = '展开全屏编辑';
+                btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
+                btn.addEventListener('click', (e) => { e.stopPropagation(); window.openLongTextModal(v.id, v.name); });
+
+                inpWrap.appendChild(ta);
+                inpWrap.appendChild(btn);
+                card.appendChild(inpWrap);
+                container.appendChild(card);
+                setTimeout(() => autoResizeVar(ta), 10);
+            },
+
+            _setupNodeScroll() {
+                if (!this.viewport) return;
+                this.viewport.addEventListener('wheel', (e) => {
+                    if (state.isVarsExpanded) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (this.isScrolling) return;
+                    this.isScrolling = true;
+                    setTimeout(() => { this.isScrolling = false; }, 200);
+
+                    const dir = e.deltaY > 0 ? 1 : -1;
+                    const wrappers = Array.from(this.viewport.querySelectorAll('.var-section-wrapper'));
+                    if (!wrappers.length) return;
+
+                    const vpTop = this.viewport.scrollTop;
+                    const vpOffset = this.viewport.offsetTop; 
+                    
+                    let curIdx = 0;
+                    for (let i = 0; i < wrappers.length; i++) {
+                        const relativeTop = wrappers[i].offsetTop - vpOffset;
+                        if (vpTop >= relativeTop - 20) { 
+                            curIdx = i; 
+                        }
+                    }
+                    
+                    const activeWrapper = wrappers[curIdx];
+                    const grid = activeWrapper.querySelector('.var-section-grid');
+                    const firstCard = grid ? grid.querySelector('.group') : null;
+                    if (!grid || !firstCard) return;
+
+                    const gridTop = grid.scrollTop;
+                    const gridMax = grid.scrollHeight - grid.clientHeight;
+                    
+                    const gridStyle = window.getComputedStyle(grid);
+                    const gap = parseFloat(gridStyle.gap) || 12;
+                    const dynamicRowStep = firstCard.offsetHeight + gap;
+
+                    const isGridAtTop = gridTop <= 5;
+                    const isGridAtBottom = gridTop >= gridMax - 5;
+
+                    if (dir === 1) { 
+                        if (!isGridAtBottom) {
+                            grid.scrollBy({ top: dynamicRowStep, behavior: 'smooth' }); 
+                        } else if (curIdx < wrappers.length - 1) {
+                            const nextWrapper = wrappers[curIdx + 1];
+                            this.viewport.scrollTo({ top: nextWrapper.offsetTop - vpOffset, behavior: 'smooth' });
+                        }
+                    } else { 
+                        if (!isGridAtTop) {
+                            grid.scrollBy({ top: -dynamicRowStep, behavior: 'smooth' }); 
+                        } else if (curIdx > 0) {
+                            const prevWrapper = wrappers[curIdx - 1];
+                            this.viewport.scrollTo({ top: prevWrapper.offsetTop - vpOffset, behavior: 'smooth' });
+                        }
+                    }
+                }, { passive: false });
+            }
+        };
+
+        window.toggleGroupVisibility = function(btn) {
+            const content = btn.nextElementSibling;
+            const icon = btn.querySelector('.chevron-icon');
+            content.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        };
+
+        function autoResizeVar(el) {
+            el.style.height = '32px';
+            const sh = el.scrollHeight;
+            const hasOverflow = sh > 36 || el.value.includes('\\n') || el.value.includes('\n');
+            
+            const btn = el.parentElement.querySelector('.ellipsis-btn');
+            if (btn) {
+                if (hasOverflow) { 
+                    btn.classList.remove('hidden'); btn.classList.add('flex'); 
+                } else { 
+                    btn.classList.add('hidden'); btn.classList.remove('flex'); 
                 }
             }
         }
+
+        function extractJsonVariables(obj, prefix = '', group = 'root', ctx = null) {
+            let vars = [];
+            if (!ctx) {
+                ctx = { colorMap: {}, colorIdx: 0 };
+            }
+
+            for (let key in obj) {
+                if (!Object.hasOwnProperty.call(obj, key)) continue;
+                const val = obj[key];
+                const curPath = prefix ? `${prefix}.${key}` : key;
+                const curGroup = prefix ? prefix.split('.')[0] : key;
+
+                if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                    vars = vars.concat(extractJsonVariables(val, curPath, curGroup, ctx));
+                } else if (Array.isArray(val)) {
+                    if (ctx.colorMap[curPath] === undefined) {
+                        const bgColors = [
+                            'rgba(255, 224, 224, 0.35)', 'rgba(255, 224, 204, 0.35)', 
+                            'rgba(255, 242, 204, 0.35)', 'rgba(221, 240, 221, 0.35)', 
+                            'rgba(204, 240, 240, 0.35)', 'rgba(204, 229, 255, 0.35)', 
+                            'rgba(230, 204, 255, 0.35)', 'rgba(255, 204, 229, 0.35)', 
+                            'rgba(240, 220, 196, 0.35)', 'rgba(220, 220, 230, 0.35)'
+                        ];
+                        ctx.colorMap[curPath] = bgColors[ctx.colorIdx % bgColors.length];
+                        ctx.colorIdx++;
+                    }
+                    const arrayBgColor = ctx.colorMap[curPath];
+                    const total = val.length;
+                    const arrayKeyName = curPath.split('.').pop(); 
+
+                    val.forEach((item, index) => {
+                        if (typeof item === 'object' && item !== null) {
+                            vars = vars.concat(extractJsonVariables(item, `${curPath}[${index}]`, curGroup, ctx));
+                        } else {
+                            vars.push({
+                                id: generateSafeId(`${curPath}[${index}]`),
+                                name: `${arrayKeyName} [${index + 1}/${total}]`,
+                                group: curGroup,
+                                path: `${curPath}[${index}]`,
+                                value: item,
+                                bgColor: arrayBgColor
+                            });
+                        }
+                    });
+                } else {
+                    vars.push({
+                        id: generateSafeId(curPath),
+                        name: key,
+                        group: curGroup,
+                        path: curPath,
+                        value: val,
+                        bgColor: null
+                    });
+                }
+            }
+            return vars;
+        }
+
+        function extractTextVariables(text) {
+            const matches = [...new Set(text.match(/\{([^}]+)\}/g) || [])];
+            return matches.map(m => {
+                const name = m.slice(1, -1);
+                return { id: generateSafeId(name), name: name, group: 'default', path: name, value: '', originalMatch: m, bgColor: null };
+            });
+        }
+
+        function hasVarListChanged(newVars) {
+            if (newVars.length !== state.lastVariables.length) return true;
+            const oldIds = new Set(state.lastVariables.map(v => v.id));
+            return !newVars.every(v => oldIds.has(v.id));
+        }
+
+        function updateVars(prefill = null) {
+            const rawContent = tplEditor.getValue();
+            const trimmed = rawContent.trim();
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try {
+                    state.jsonAst = JSON.parse(rawContent);
+                    state.inputType = 'json';
+                    state.variables = extractJsonVariables(state.jsonAst);
+                    tplEditor.setOption("mode", "javascript");
+                    tplEditor.getWrapperElement().classList.add('is-json-mode');
+                    resEditor.getWrapperElement().classList.add('is-json-mode');
+                } catch (e) {
+                    state.inputType = 'text';
+                    state.jsonAst = null;
+                    state.variables = extractTextVariables(rawContent);
+                    tplEditor.setOption("mode", "text/plain");
+                    tplEditor.getWrapperElement().classList.remove('is-json-mode');
+                    resEditor.getWrapperElement().classList.remove('is-json-mode');
+                }
+            } else {
+                state.inputType = 'text';
+                state.jsonAst = null;
+                state.variables = extractTextVariables(rawContent);
+                tplEditor.setOption("mode", "text/plain");
+                tplEditor.getWrapperElement().classList.remove('is-json-mode');
+                resEditor.getWrapperElement().classList.remove('is-json-mode');
+            }
+
+            tplEditor.refresh();
+            resEditor.refresh();
+
+            if (hasVarListChanged(state.variables)) {
+                state.lastVariables = state.variables.map(v => ({ id: v.id }));
+                VarPanel.render(prefill);
+            } else {
+                syncResults();
+            }
+        }
+
+        function syncResults() {
+            if (window._sp) return;
+            window._sp = true;
+            requestAnimationFrame(() => { window._sp = false; _doSync(); });
+        }
+
+        function _doSync() {
+            if (state.inputType === 'json') {
+                let updatedAst = JSON.parse(JSON.stringify(state.jsonAst));
+                state.variables.forEach(v => {
+                    const inputEl = document.getElementById(v.id);
+                    let finalVal = inputEl ? inputEl.value : v.value;
+                    if (typeof v.value === 'number' && !isNaN(Number(finalVal)) && finalVal.toString().trim() !== '') finalVal = Number(finalVal);
+                    else if (typeof v.value === 'boolean') { if (finalVal === 'true') finalVal = true; if (finalVal === 'false') finalVal = false; }
+                    v.finalVal = finalVal;
+                    try {
+                        const regex = /\[(\d+)\]/g;
+                        let pathStr = v.path.replace(regex, ".$1");
+                        const keys = pathStr.split('.');
+                        let cur = updatedAst;
+                        for (let i = 0; i < keys.length - 1; i++) { if (cur[keys[i]] === undefined) cur[keys[i]] = {}; cur = cur[keys[i]]; }
+                        cur[keys[keys.length - 1]] = finalVal;
+                    } catch (e) {}
+                });
+                state.plainTextResult = JSON.stringify(updatedAst, null, 2);
+                resEditor.setOption("mode", "javascript");
+                resEditor.setValue(state.plainTextResult);
+                resEditor.getAllMarks().forEach(m => m.clear());
+                state.variables.forEach(v => {
+                    let searchStr = JSON.stringify(v.finalVal);
+                    let contextRegex = v.name.match(/^\[\d+\]$/) ? new RegExp(escapeRegExp(searchStr), 'g') : new RegExp('"' + escapeRegExp(v.name) + '":\\s*' + escapeRegExp(searchStr), 'g');
+                    let match = contextRegex.exec(state.plainTextResult);
+                    if (match) {
+                        let start = match.index + match[0].length - searchStr.length;
+                        let end = start + searchStr.length;
+                        const from = resEditor.posFromIndex(start), to = resEditor.posFromIndex(end);
+                        const cls = v.finalVal === v.value ? "original-var clickable-var" : "highlight-var clickable-var";
+                        resEditor.markText(from, to, { className: cls, attributes: { "data-target-id": v.id, "data-varname": v.name } });
+                    }
+                });
+            } else {
+                let rawTpl = tplEditor.getValue();
+                let plainResult = "";
+                let marksData = [];
+                if (state.variables.length > 0) {
+                    const dict = {};
+                    state.variables.forEach(v => {
+                        const inputElement = document.getElementById(v.id);
+                        dict[v.originalMatch] = { val: (inputElement && inputElement.value !== '') ? inputElement.value : v.originalMatch, id: v.id, name: v.name };
+                    });
+                    const sortedVars = state.variables.slice().sort((a, b) => b.originalMatch.length - a.originalMatch.length);
+                    const pattern = new RegExp(sortedVars.map(v => escapeRegExp(v.originalMatch)).join('|'), 'g');
+                    let lastIdx = 0, match;
+                    while ((match = pattern.exec(rawTpl)) !== null) {
+                        const item = dict[match[0]];
+                        plainResult += rawTpl.substring(lastIdx, match.index);
+                        let start = plainResult.length;
+                        plainResult += item.val;
+                        let end = plainResult.length;
+                        marksData.push({ start, end, isOriginal: item.val === match[0], id: item.id, name: item.name });
+                        lastIdx = pattern.lastIndex;
+                    }
+                    plainResult += rawTpl.substring(lastIdx);
+                } else {
+                    plainResult = rawTpl;
+                }
+                state.plainTextResult = plainResult;
+                resEditor.setOption("mode", "text/plain");
+                resEditor.setValue(plainResult);
+                resEditor.getAllMarks().forEach(m => m.clear());
+                marksData.forEach(m => {
+                    const from = resEditor.posFromIndex(m.start), to = resEditor.posFromIndex(m.end);
+                    const cls = m.isOriginal ? "original-var clickable-var" : "highlight-var clickable-var";
+                    resEditor.markText(from, to, { className: cls, attributes: { "data-target-id": m.id, "data-varname": m.name } });
+                });
+            }
+            updateCounters();
+        }
+
+        function updateCounters() {
+            if (!tplEditor) return;
+            const tplText = tplEditor.getValue();
+            dom.tplCounter.innerText = `${tplText.length} 字符 | ~${estimateTokens(tplText)} Tokens`;
+            dom.resCounter.innerText = `${state.plainTextResult.length} 字符 | ~${estimateTokens(state.plainTextResult)} Tokens`;
+        }
+
+        window.toggleVarsExpand = function() {
+            state.isVarsExpanded = !state.isVarsExpanded;
+            const body = document.body;
+            const expandText = document.getElementById('expandText');
+            const expandIcon = document.getElementById('expandIcon');
+            
+            if (state.isVarsExpanded) {
+                body.classList.remove('vars-collapsed');
+                body.classList.add('vars-expanded');
+                expandText.innerText = '还原面板';
+                expandIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h4v4M4 14l5 5m11-5h-4v4m4-4l-5 5M4 10h4V6m-4 4l5-5m11 5h-4V6m4 4l-5-5"></path>`;
+            } else {
+                body.classList.add('vars-collapsed');
+                body.classList.remove('vars-expanded');
+                expandText.innerText = '展开面板';
+                expandIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>`;
+                
+                if (VarPanel.viewport) { VarPanel.viewport.scrollTop = 0; }
+                VarPanel.updateCollapsedHeight();
+            }
+            setTimeout(() => { tplEditor.refresh(); resEditor.refresh(); }, 400);
+        };
+
+        window.openLongTextModal = function(id, name) {
+            state.currentEditingVarId = id;
+            dom.longTextModalTitle.innerText = `沉浸编辑: ${name}`;
+            dom.longTextInput.value = document.getElementById(id).value;
+            dom.longTextModal.classList.remove('hidden');
+            setTimeout(() => dom.longTextInput.focus(), 100);
+        };
+        window.closeLongTextModal = function() { dom.longTextModal.classList.add('hidden'); state.currentEditingVarId = null; };
+        window.saveLongText = function() {
+            if (!state.currentEditingVarId) return;
+            const el = document.getElementById(state.currentEditingVarId);
+            if (el) { el.value = dom.longTextInput.value; autoResizeVar(el); }
+            syncResults();
+            closeLongTextModal();
+            showToast('已同步底层数据');
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            tplEditor = CodeMirror.fromTextArea(document.getElementById('tpl'), { lineNumbers: true, lineWrapping: true, theme: 'default', mode: 'javascript' });
+            resEditor = CodeMirror.fromTextArea(document.getElementById('res'), { lineNumbers: true, lineWrapping: true, theme: 'default', readOnly: true, mode: 'javascript' });
+
+            tplEditor.on('change', () => { if (!state.isApplyingAi) handleTemplateInput(); });
+            tplEditor.on('scroll', () => {
+                if (!state.syncEnabled || state.isVarsExpanded) return;
+                dom.selectionToolbar.classList.add('hidden');
+                if (!isSyncingLeft) {
+                    isSyncingRight = true;
+                    const info = tplEditor.getScrollInfo();
+                    const max = info.height - info.clientHeight;
+                    if (max > 0) {
+                        const ratio = info.top / max;
+                        const resInfo = resEditor.getScrollInfo();
+                        resEditor.scrollTo(null, ratio * (resInfo.height - resInfo.clientHeight));
+                    }
+                }
+                isSyncingLeft = false;
+            });
+            resEditor.on('scroll', () => {
+                dom.globalTooltip.classList.remove('show');
+                if (!state.syncEnabled || state.isVarsExpanded) return;
+                if (!isSyncingRight) {
+                    isSyncingLeft = true;
+                    const info = resEditor.getScrollInfo();
+                    const max = info.height - info.clientHeight;
+                    if (max > 0) {
+                        const ratio = info.top / max;
+                        const tplInfo = tplEditor.getScrollInfo();
+                        tplEditor.scrollTo(null, ratio * (tplInfo.height - tplInfo.clientHeight));
+                    }
+                }
+                isSyncingRight = false;
+            });
+
+            tplEditor.on("cursorActivity", () => {
+                if (state.inputType === 'json') { dom.selectionToolbar.classList.add('hidden'); return; }
+                const sel = tplEditor.getSelection().trim();
+                if (!sel) { dom.selectionToolbar.classList.add('hidden'); return; }
+                state.currentSelectionText = sel;
+                const pos = tplEditor.cursorCoords(false, "window");
+                dom.selectionToolbar.style.top = `${pos.top - 38}px`;
+                dom.selectionToolbar.style.left = `${pos.left}px`;
+                dom.selectionToolbar.classList.remove('hidden');
+            });
+
+            const rw = resEditor.getWrapperElement();
+            rw.addEventListener('mouseover', (e) => {
+                if (e.target.classList.contains('highlight-var') || e.target.classList.contains('original-var')) {
+                    dom.globalTooltip.innerText = e.target.getAttribute('data-varname');
+                    dom.globalTooltip.classList.add('show');
+                    const rect = e.target.getBoundingClientRect();
+                    dom.globalTooltip.style.left = `${rect.left + rect.width / 2}px`;
+                    dom.globalTooltip.style.top = `${rect.top - 24}px`;
+                }
+            });
+            rw.addEventListener('mouseout', (e) => {
+                if (e.target.classList.contains('highlight-var') || e.target.classList.contains('original-var')) dom.globalTooltip.classList.remove('show');
+            });
+            rw.addEventListener('click', (e) => {
+                if (e.target.classList.contains('clickable-var')) {
+                    const id = e.target.getAttribute('data-target-id');
+                    const inputEl = document.getElementById(id);
+                    if (inputEl) { inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); inputEl.focus(); }
+                }
+            });
+
+            VarPanel.init();
+            updateCounters();
+            window.addEventListener('resize', () => {
+                if (!state.isVarsExpanded) VarPanel.updateCollapsedHeight();
+                else document.getElementById('vars-section').style.maxHeight = '2000px';
+                tplEditor.refresh();
+                resEditor.refresh();
+            });
+        });
+
+        let typingTimer;
+        function handleTemplateInput() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => updateVars(), 400);
+            if (!state.isApplyingAi) state.fileMetadata = null;
+        }
+
+        window.handleFileUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) return showToast('文件需在 2MB 以内。', 'error');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let content = e.target.result;
+                if (file.name.endsWith('.json')) {
+                    try { const parsed = JSON.parse(content); if (parsed.template) content = parsed.template; } catch (err) {}
+                }
+                tplEditor.setValue(content);
+                state.fileMetadata = null;
+                updateVars();
+                event.target.value = '';
+                showToast('文件导入成功');
+            };
+            reader.readAsText(file);
+        };
+
+        window.openVarPromptModal = function() {
+            dom.selectionToolbar.classList.add('hidden');
+            dom.varPromptDesc.innerText = `选中片段: "${state.currentSelectionText}"`;
+            dom.varPromptInput.value = '';
+            dom.varPromptModal.classList.remove('hidden');
+            setTimeout(() => dom.varPromptInput.focus(), 100);
+        };
+        window.closeVarPromptModal = function() { dom.varPromptModal.classList.add('hidden'); state.currentSelectionText = ''; };
+        window.confirmVarPrompt = function() {
+            const varName = dom.varPromptInput.value.trim();
+            if (!varName) return showToast('变量名不能为空', 'error');
+            tplEditor.replaceSelection(`{${varName}}`);
+            updateVars({ [varName]: state.currentSelectionText });
+            closeVarPromptModal();
+        };
+
+        window.toggleSidebar = function() {
+            if (dom.sidebar.classList.contains('sidebar-expanded')) dom.sidebar.classList.replace('sidebar-expanded', 'sidebar-collapsed');
+            else dom.sidebar.classList.replace('sidebar-collapsed', 'sidebar-expanded');
+        };
+        window.toggleSync = (cb) => { state.syncEnabled = cb.checked; };
+        window.clearTemplate = () => { tplEditor.setValue(''); state.fileMetadata = null; updateVars(); showToast('已清空底层数据区'); };
+        window.copyResult = async () => {
+            if (!state.plainTextResult) return;
+            try {
+                if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(state.plainTextResult);
+                else { const temp = document.createElement('textarea'); temp.value = state.plainTextResult; document.body.appendChild(temp); temp.select(); document.execCommand('copy'); document.body.removeChild(temp); }
+                dom.copyBtn.classList.replace('bg-slate-800', 'bg-emerald-600'); dom.copyText.innerText = '已复制!';
+                setTimeout(() => { dom.copyBtn.classList.replace('bg-emerald-600', 'bg-slate-800'); dom.copyText.innerText = '复制结果'; }, 2000);
+            } catch (e) { showToast('复制失败', 'error'); }
+        };
+
+        window.openApiSettings = () => { dom.apiModal.classList.remove('hidden'); };
+        window.closeApiSettings = () => { dom.apiModal.classList.add('hidden'); };
+        window.saveApiSettings = () => {
+            state.apiConfig.baseUrl = dom.apiBaseUrl.value;
+            state.apiConfig.model = dom.apiModelName.value;
+            state.apiConfig.key = dom.apiKey.value;
+            localStorage.setItem('prompt_ai_config_secure', JSON.stringify(state.apiConfig));
+            closeApiSettings();
+            showToast('API 配置已保存');
+        };
+
+        window.openExportModal = () => {
+            const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            let cat = '未分类', sum = 'Prompt模板';
+            if (state.fileMetadata) { if (state.fileMetadata.category) cat = state.fileMetadata.category.trim(); if (state.fileMetadata.summary) sum = state.fileMetadata.summary.trim(); }
+            dom.exportFilenameInput.value = `${cat}-${sum}-${date}`;
+            dom.exportModal.classList.remove('hidden');
+        };
+        window.closeExportModal = () => { dom.exportModal.classList.add('hidden'); };
+        window.executeExport = () => {
+            const filename = dom.exportFilenameInput.value.trim() || 'Prompt模板';
+            const format = dom.exportFormatSelect.value;
+            const content = tplEditor.getValue();
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `${filename}.${format}`;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            closeExportModal();
+        };
+
+        window.handleFolderImport = async () => {
+            if (!window.showDirectoryPicker) {
+                state.isFallbackMode = true;
+                const inp = document.createElement('input'); inp.type = 'file'; inp.webkitdirectory = true; inp.multiple = true;
+                inp.onchange = (e) => {
+                    const files = Array.from(e.target.files).filter(f => /\.(txt|md|json)$/i.test(f.name));
+                    if (!files.length) return showToast('未找到支持的文本文件', 'error');
+                    buildFallbackTree(files); state.dirHandle = null; renderSidebarFileList();
+                    if (dom.sidebar.classList.contains('sidebar-collapsed')) toggleSidebar();
+                    showToast(`已兼容加载 ${files.length} 个文件`);
+                };
+                inp.click();
+                return;
+            }
+            try {
+                const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                state.dirHandle = dirHandle; state.isFallbackMode = false;
+                await refreshSidebarFolder(true);
+            } catch (err) { if (err.name !== 'AbortError') showToast('读取文件夹失败', 'error'); }
+        };
 
         function buildFallbackTree(files) {
             const root = { children: [] };
             state.nodeMap = {};
             files.forEach(file => {
-                const parts = file.webkitRelativePath.split('/'); 
-                let current = root;
-                let currentPath = '';
+                const parts = file.webkitRelativePath.split('/');
+                let cur = root, curPath = '';
                 for (let i = 0; i < parts.length; i++) {
                     const part = parts[i];
-                    currentPath += part + (i === parts.length - 1 ? '' : '/');
+                    curPath += part + (i === parts.length - 1 ? '' : '/');
                     if (i === parts.length - 1) {
-                        const node = { kind: 'file', name: part, path: currentPath, file };
-                        current.children.push(node);
-                        state.nodeMap[currentPath] = node;
+                        const node = { kind: 'file', name: part, path: curPath, file };
+                        cur.children.push(node); state.nodeMap[curPath] = node;
                     } else {
-                        let folder = current.children.find(c => c.name === part && c.kind === 'directory');
-                        if (!folder) {
-                            folder = { kind: 'directory', name: part, path: currentPath, children: [] };
-                            current.children.push(folder);
-                            state.nodeMap[currentPath] = folder;
-                        }
-                        current = folder;
+                        let folder = cur.children.find(c => c.name === part && c.kind === 'directory');
+                        if (!folder) { folder = { kind: 'directory', name: part, path: curPath, children: [] }; cur.children.push(folder); state.nodeMap[curPath] = folder; }
+                        cur = folder;
                     }
                 }
             });
             let tree = root.children;
             if (tree.length === 1 && tree[0].kind === 'directory') tree = tree[0].children;
-            
-            function sortTree(nodes) {
-                nodes.sort((a, b) => {
-                    if (a.kind === b.kind) return a.name.localeCompare(b.name);
-                    return a.kind === 'directory' ? -1 : 1;
-                });
-                nodes.forEach(n => { if (n.children) sortTree(n.children); });
-            }
+            function sortTree(nodes) { nodes.sort((a,b) => a.kind===b.kind ? a.name.localeCompare(b.name) : a.kind==='directory'?-1:1); nodes.forEach(n => { if(n.children) sortTree(n.children); }); }
             sortTree(tree);
             state.fileTree = tree;
         }
 
-        async function refreshSidebarFolder(isInitial = false) {
-            if (!state.dirHandle) {
-                if (!isInitial) showToast('兼容模式下无法无痕刷新，请重新点击导入', 'error');
-                return;
-            }
-
+        window.refreshSidebarFolder = async (isInit = false) => {
+            if (!state.dirHandle) { if (!isInit) showToast('兼容模式下无法刷新，请重新导入', 'error'); return; }
             try {
-                state.nodeMap = {};
-                let fileCount = 0;
-
-                async function getTreeRecursively(dirHandle, parentHandle, currentPath = '') {
+                state.nodeMap = {}; let count = 0;
+                async function getTree(handle, parent, curPath = '') {
                     const nodes = [];
-                    for await (const entry of dirHandle.values()) {
-                        const nodePath = currentPath + entry.name;
-                        if (entry.kind === 'file') {
-                            if (/\.(txt|md|json)$/i.test(entry.name)) {
-                                const file = await entry.getFile();
-                                const node = { kind: 'file', name: entry.name, path: nodePath, handle: entry, parentHandle, file };
-                                nodes.push(node);
-                                state.nodeMap[nodePath] = node;
-                                fileCount++;
-                            }
+                    for await (const entry of handle.values()) {
+                        const np = curPath + entry.name;
+                        if (entry.kind === 'file' && /\.(txt|md|json)$/i.test(entry.name)) {
+                            const file = await entry.getFile();
+                            const node = { kind: 'file', name: entry.name, path: np, handle: entry, parentHandle: parent, file };
+                            nodes.push(node); state.nodeMap[np] = node; count++;
                         } else if (entry.kind === 'directory') {
-                            const children = await getTreeRecursively(entry, entry, nodePath + '/');
-                            // 保留所有文件夹，不管是否为空
-                            const node = { kind: 'directory', name: entry.name, path: nodePath + '/', handle: entry, parentHandle, children };
-                            nodes.push(node);
-                            state.nodeMap[nodePath + '/'] = node;
+                            const children = await getTree(entry, entry, np + '/');
+                            const node = { kind: 'directory', name: entry.name, path: np + '/', handle: entry, parentHandle: parent, children };
+                            nodes.push(node); state.nodeMap[np + '/'] = node;
                         }
                     }
-                    return nodes.sort((a, b) => {
-                        if (a.kind === b.kind) return a.name.localeCompare(b.name);
-                        return a.kind === 'directory' ? -1 : 1; 
-                    });
+                    return nodes.sort((a,b) => a.kind===b.kind ? a.name.localeCompare(b.name) : a.kind==='directory'?-1:1);
                 }
-
-                state.fileTree = await getTreeRecursively(state.dirHandle, state.dirHandle);
-
-                if (fileCount === 0 && isInitial) {
-                    showToast('该文件夹内未找到支持的文本文件，将显示空目录结构', 'error');
-                }
-
+                state.fileTree = await getTree(state.dirHandle, state.dirHandle);
+                if (count === 0 && isInit) showToast('未找到支持的文件', 'error');
                 renderSidebarFileList();
-
                 if (dom.sidebar.classList.contains('sidebar-collapsed')) toggleSidebar();
-                
-                if (!isInitial) {
-                    showToast(`已同步本地硬盘，共读取 ${fileCount} 个文件`);
-                } else if (fileCount > 0) {
-                    showToast(`成功加载 ${fileCount} 个文件`);
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    showToast('刷新失败，请检查权限。', 'error');
-                }
-            }
-        }
+                if (!isInit) showToast(`已同步硬盘，读取 ${count} 个文件`);
+                else if (count > 0) showToast(`加载 ${count} 个文件`);
+            } catch (err) { if (err.name !== 'AbortError') showToast('刷新失败', 'error'); }
+        };
 
         function renderSidebarFileList() {
-            if (!state.fileTree || state.fileTree.length === 0) {
-                dom.fileListContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-slate-400 text-xs italic py-10 px-4 text-center">
-                    <svg class="w-8 h-8 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    当前目录为空或无支持的文本文件
-                </div>`;
-                return;
-            }
-            
-            function generateHTML(nodes, depth = 0) {
-                let html = '';
-                nodes.forEach(node => {
-                    const padding = 12 + depth * 14; 
-                    const safePath = escapeHtml(node.path).replace(/'/g, "\\'");
-                    
-                    if (node.kind === 'directory') {
-                        const isExpanded = state.expandedFolders.has(node.path);
-                        const caretRot = isExpanded ? 'rotate-90' : '';
-                        html += `
-                            <div class="w-full flex items-center justify-between px-2 py-1.5 hover:bg-slate-100 text-sm text-slate-700 rounded transition-colors group cursor-pointer" 
-                                 style="padding-left: ${padding}px" 
-                                 onclick="toggleFolder('${safePath}')"
-                                 oncontextmenu="showContextMenu(event, '${safePath}')">
-                                <div class="flex items-center gap-1.5 overflow-hidden">
-                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform ${caretRot}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                    <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-                                    <span class="truncate font-medium select-none text-slate-800">${escapeHtml(node.name)}</span>
-                                </div>
-                            </div>
-                        `;
-                        if (isExpanded && node.children) {
-                            html += generateHTML(node.children, depth + 1);
-                        }
+            if (!state.fileTree || state.fileTree.length === 0) { dom.fileListContainer.innerHTML = '<div class="text-slate-400 text-xs text-center py-10 px-4">目录为空</div>'; return; }
+            function gen(nodes, depth = 0) {
+                let h = '';
+                nodes.forEach(n => {
+                    const pad = 12 + depth * 14;
+                    const sp = n.path.replace(/'/g, "\\'");
+                    if (n.kind === 'directory') {
+                        const exp = state.expandedFolders.has(n.path);
+                        h += `<div class="w-full flex items-center justify-between px-2 py-1.5 hover:bg-slate-100 text-sm text-slate-700 rounded transition-colors group cursor-pointer" style="padding-left:${pad}px" onclick="window.toggleFolder('${sp}')" oncontextmenu="window.showContextMenu(event,'${sp}')"><div class="flex items-center gap-1.5 overflow-hidden"><svg class="w-3.5 h-3.5 text-slate-400 transition-transform flex-shrink-0 ${exp?'rotate-90':''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg><svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg><span class="truncate font-medium select-none text-slate-800">${escapeHtml(n.name)}</span></div></div>`;
+                        if (exp && n.children) h += gen(n.children, depth + 1);
                     } else {
-                        const ext = node.name.split('.').pop().toLowerCase();
-                        let iconSvg = '';
-                        if (ext === 'json') iconSvg = `<svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>`;
-                        else if (ext === 'md') iconSvg = `<svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>`;
-                        else iconSvg = `<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>`;
-                        
-                        html += `
-                            <button class="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-blue-50 focus:bg-blue-50 text-sm text-slate-700 rounded transition-colors group border border-transparent focus:border-blue-200" 
-                                    style="padding-left: ${padding + 18}px"
-                                    onclick="loadSidebarFile('${safePath}')"
-                                    oncontextmenu="showContextMenu(event, '${safePath}')">
-                                ${iconSvg}
-                                <span class="truncate flex-1 text-left group-hover:text-blue-700 select-none">${escapeHtml(node.name)}</span>
-                            </button>
-                        `;
+                        const ext = n.name.split('.').pop().toLowerCase();
+                        let icon = '';
+                        if (ext === 'json') icon = '<svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>';
+                        else if (ext === 'md') icon = '<svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>';
+                        else icon = '<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>';
+                        h += `<button class="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-blue-50 focus:bg-blue-50 text-sm text-slate-700 rounded transition-colors group border border-transparent focus:border-blue-200" style="padding-left:${pad+18}px" onclick="window.loadSidebarFile('${sp}')" oncontextmenu="window.showContextMenu(event,'${sp}')">${icon}<span class="truncate flex-1 text-left group-hover:text-blue-700 select-none">${escapeHtml(n.name)}</span></button>`;
                     }
                 });
-                return html;
+                return h;
             }
-            
-            dom.fileListContainer.innerHTML = `<div class="space-y-0.5 pb-4 pt-1">${generateHTML(state.fileTree)}</div>`;
+            dom.fileListContainer.innerHTML = `<div class="space-y-0.5 pb-4 pt-1">${gen(state.fileTree)}</div>`;
         }
 
-        function toggleFolder(path) {
-            if (state.expandedFolders.has(path)) {
-                state.expandedFolders.delete(path);
-            } else {
-                state.expandedFolders.add(path);
-            }
-            renderSidebarFileList();
-        }
-
-        function loadSidebarFile(path) {
-            const node = state.nodeMap[path];
+        window.toggleFolder = (p) => { if (state.expandedFolders.has(p)) state.expandedFolders.delete(p); else state.expandedFolders.add(p); renderSidebarFileList(); };
+        window.loadSidebarFile = (p) => {
+            const node = state.nodeMap[p];
             if (!node || !node.file) return;
-            
             const reader = new FileReader();
             reader.onload = e => {
                 let content = e.target.result;
-                if (node.name.endsWith('.json')) {
-                    try {
-                        const parsed = JSON.parse(content);
-                        if (parsed.template) content = parsed.template;
-                    } catch(err) {}
-                }
-                dom.tpl.innerText = content;
-                state.fileMetadata = null; 
+                if (node.name.endsWith('.json')) { try { const parsed = JSON.parse(content); if (parsed.template) content = parsed.template; } catch (err) {} }
+                tplEditor.setValue(content);
+                state.fileMetadata = null;
                 updateVars();
             };
             reader.readAsText(node.file);
-        }
-
-        // ==========================
-        // 右键菜单与删除逻辑
-        // ==========================
-        function showContextMenu(e, path) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (state.isFallbackMode) {
-                showToast('兼容模式下无权限删除本地物理文件', 'error');
-                return;
-            }
-            
+        };
+        window.showContextMenu = (e, path) => {
+            e.preventDefault(); e.stopPropagation();
+            if (state.isFallbackMode) return showToast('无权限删除文件', 'error');
             state.contextMenuTarget = state.nodeMap[path];
             if (!state.contextMenuTarget) return;
-
             dom.fileContextMenu.style.left = `${e.clientX}px`;
             dom.fileContextMenu.style.top = `${e.clientY}px`;
             dom.fileContextMenu.classList.remove('hidden');
-        }
-
-        document.addEventListener('click', (e) => {
-            if (!dom.fileContextMenu.contains(e.target)) {
-                dom.fileContextMenu.classList.add('hidden');
-            }
-        });
-
-        async function executeDeleteFile() {
+        };
+        document.addEventListener('click', (e) => { if (!dom.fileContextMenu.contains(e.target)) dom.fileContextMenu.classList.add('hidden'); });
+        window.executeDeleteFile = async () => {
             dom.fileContextMenu.classList.add('hidden');
             const target = state.contextMenuTarget;
             if (!target || !target.parentHandle) return;
-            
-            if (target.handle === state.dirHandle) {
-                showToast('不能删除根目录本身', 'error');
-                return;
-            }
-            
-            const confirmMsg = target.kind === 'directory' 
-                ? `危险操作！\n\n确定要永久删除文件夹 "${target.name}" 及其包含的所有内容吗？此操作无法撤销。` 
-                : `确定要永久删除文件 "${target.name}" 吗？`;
-                
-            if (!confirm(confirmMsg)) return;
+            if (!confirm(`确定永久删除 "${target.name}" 吗？`)) return;
+            try { await target.parentHandle.removeEntry(target.name, { recursive: true }); showToast('文件已移除'); await window.refreshSidebarFolder(false); }
+            catch (err) { showToast('删除失败', 'error'); }
+        };
 
-            try {
-                await target.parentHandle.removeEntry(target.name, { recursive: true });
-                showToast('文件已从您的本地硬盘中永久移除');
-                await refreshSidebarFolder(false); 
-            } catch (err) {
-                showToast('删除失败：可能文件被占用或无权限', 'error');
-            }
-        }
-
-        // ==========================
-        // 导出逻辑
-        // ==========================
-        function getFormattedDate() {
-            const now = new Date();
-            const yyyy = now.getFullYear();
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function openExportModal() {
-            const dateStr = getFormattedDate();
-            let cat = "未分类";
-            let sum = "Prompt模板";
-            
-            if (state.fileMetadata) {
-                if (state.fileMetadata.category) cat = state.fileMetadata.category.trim();
-                if (state.fileMetadata.summary) sum = state.fileMetadata.summary.trim();
-            }
-            
-            dom.exportFilenameInput.value = `${cat}-${sum}-${dateStr}`;
-            dom.exportModal.classList.remove('hidden');
-        }
-
-        function closeExportModal() { dom.exportModal.classList.add('hidden'); }
-
-        function executeExport() {
-            const filename = dom.exportFilenameInput.value.trim() || 'Prompt模板';
-            const format = dom.exportFormatSelect.value;
-            const content = dom.tpl.innerText;
-            
-            if (!content.trim()) return showToast('模板内容为空，无法导出。', 'error');
-
-            let exportData = content;
-            if (format === 'json') {
-                exportData = JSON.stringify({ template: content }, null, 2);
-            }
-
-            const blob = new Blob([exportData], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${filename}.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-            
-            closeExportModal();
-            showToast('文件已成功导出。');
-        }
-
-        // ==========================
-        // 变量处理与核心业务逻辑
-        // ==========================
-        function clearTemplate() {
-            dom.tpl.innerText = '';
-            state.fileMetadata = null; 
-            updateVars();
-            showToast('已清空模板内容');
-        }
-
-        function removeVariable(rawName, safeId) {
-            const inputEl = document.getElementById(safeId);
-            const valToRestore = inputEl ? inputEl.value : '';
-            dom.tpl.innerText = (dom.tpl.innerText || '').replaceAll(`{${rawName}}`, valToRestore);
-            updateVars();
-        }
-
-        dom.varsContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('.remove-var-btn');
-            if (btn) removeVariable(btn.dataset.name, btn.dataset.id);
-        });
-
-        dom.tpl.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const text = e.dataTransfer.getData('text/plain');
-            if (text) {
-                const sel = window.getSelection();
-                if (sel.rangeCount) {
-                    sel.deleteFromDocument();
-                    sel.getRangeAt(0).insertNode(document.createTextNode(text));
-                    sel.collapseToEnd();
-                    handleTemplateInput();
-                }
-            }
-        });
-
-        document.addEventListener('selectionchange', () => {
-            const sel = window.getSelection();
-            if (sel.isCollapsed || !dom.tpl.contains(sel.anchorNode)) {
-                dom.selectionToolbar.classList.add('hidden');
-                return;
-            }
-            const text = sel.toString().trim();
-            if (!text) return;
-            
-            state.currentSelectionText = text;
-            state.savedRange = sel.getRangeAt(0).cloneRange();
-            
-            const rect = state.savedRange.getBoundingClientRect();
-            dom.selectionToolbar.style.top = `${rect.top - 38}px`;
-            dom.selectionToolbar.style.left = `${rect.left + (rect.width / 2)}px`;
-            dom.selectionToolbar.classList.remove('hidden');
-        });
-
-        function openVarPromptModal() {
-            dom.selectionToolbar.classList.add('hidden');
-            dom.varPromptDesc.innerText = `选中片段: "${state.currentSelectionText}"`;
-            dom.varPromptInput.value = '';
-            dom.varPromptModal.classList.remove('hidden');
-            setTimeout(() => dom.varPromptInput.focus(), 100); 
-        }
-
-        function closeVarPromptModal() {
-            dom.varPromptModal.classList.add('hidden');
-            state.currentSelectionText = '';
-            state.savedRange = null;
-        }
-
-        function confirmVarPrompt() {
-            const varName = dom.varPromptInput.value.trim();
-            if (!varName) {
-                showToast('变量名不能为空', 'error');
-                return;
-            }
-            
-            if (state.savedRange) {
-                state.savedRange.deleteContents();
-                const textNode = document.createTextNode(`{${varName}}`);
-                state.savedRange.insertNode(textNode);
-                
-                const newRange = document.createRange();
-                newRange.setStartAfter(textNode);
-                newRange.collapse(true);
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(newRange);
-            } else {
-                let currentText = dom.tpl.innerText;
-                dom.tpl.innerText = currentText.replaceAll(state.currentSelectionText, `{${varName}}`);
-            }
-            
-            updateVars({ [varName]: state.currentSelectionText });
-            closeVarPromptModal();
-        }
-
-        function openApiSettings() {
-            dom.apiBaseUrl.value = state.apiConfig.baseUrl;
-            dom.apiModelName.value = state.apiConfig.model;
-            dom.apiKey.value = state.apiConfig.key;
-            dom.apiModal.classList.remove('hidden');
-        }
-
-        function closeApiSettings() { dom.apiModal.classList.add('hidden'); }
-
-        function saveApiSettings() {
-            state.apiConfig = { baseUrl: dom.apiBaseUrl.value.trim(), model: dom.apiModelName.value.trim(), key: dom.apiKey.value.trim() };
-            localStorage.setItem('prompt_ai_config_secure', JSON.stringify(state.apiConfig));
-            closeApiSettings();
-            showToast('配置已永久保存在本地设备。');
-        }
-
-        let loadingStepTimer;
-        const loadingSteps = ["正在建立模型安全连接...", "正在进行全文语义拆解...", "正在提取并生成命名元数据...", "正在执行变量结构化归类...", "处理数据较大，请耐心稍候..."];
-
-        function openGranularityModal() {
-            const rawText = dom.tpl.innerText;
-            if (!rawText.trim()) return showToast('请先在左侧输入区粘贴文本。', 'error');
+        window.openGranularityModal = () => {
+            if (!tplEditor.getValue().trim()) return showToast('请先在左侧输入区粘贴文本。', 'error');
+            if (state.inputType === 'json') return showToast('当前为 JSON 模式，请勿使用 AI 文本提取功能。', 'error');
             if (!state.apiConfig.key) return openApiSettings();
             dom.granularityModal.classList.remove('hidden');
-        }
-
-        function closeGranularityModal() { dom.granularityModal.classList.add('hidden'); }
-        function closeAiResultModal() { dom.aiResultModal.classList.add('hidden'); }
-        function cancelAiExtraction() {
-            if (state.abortController) {
-                state.abortController.abort();
-                state.abortController = null;
-            }
-            clearInterval(loadingStepTimer);
-            dom.aiLoading.classList.add('hidden');
+        };
+        window.closeGranularityModal = () => { dom.granularityModal.classList.add('hidden'); };
+        window.closeAiResultModal = () => { dom.aiResultModal.classList.add('hidden'); };
+        window.cancelAiExtraction = () => {
+            if (state.abortController) { state.abortController.abort(); state.abortController = null; }
+            clearInterval(window._lt); dom.aiLoading.classList.add('hidden');
             showToast('已主动取消提取流程。', 'error');
-        }
+        };
 
-        async function startAiExtraction() {
+        const loadingSteps = ["正在建立模型安全连接...","正在进行全文语义拆解...","正在提取并生成命名元数据...","正在执行变量结构化归类...","处理数据较大，请耐心稍候..."];
+        window.startAiExtraction = async () => {
             closeGranularityModal();
             dom.aiLoading.classList.remove('hidden');
             state.abortController = new AbortController();
-            
             let stepIndex = 0;
-            dom.aiLoadingText.innerText = loadingSteps[0];
-            dom.aiLoadingText.style.opacity = 1;
-            
-            loadingStepTimer = setInterval(() => {
-                stepIndex = Math.min(stepIndex + 1, loadingSteps.length - 1);
-                dom.aiLoadingText.style.opacity = 0; 
-                setTimeout(() => { dom.aiLoadingText.innerText = loadingSteps[stepIndex]; dom.aiLoadingText.style.opacity = 1; }, 300); 
-            }, 1800);
-            
-            const rawText = dom.tpl.innerText;
+            dom.aiLoadingText.innerText = loadingSteps[0]; dom.aiLoadingText.style.opacity = 1;
+            window._lt = setInterval(() => { stepIndex = Math.min(stepIndex+1, loadingSteps.length-1); dom.aiLoadingText.style.opacity = 0; setTimeout(() => { dom.aiLoadingText.innerText = loadingSteps[stepIndex]; dom.aiLoadingText.style.opacity = 1; }, 300); }, 1800);
+            const rawText = tplEditor.getValue();
             const granularity = document.querySelector('input[name="granularity"]:checked').value;
-            let ruleDetail = granularity === 'coarse' ? "大幅收敛，剔除修饰词。" : granularity === 'medium' ? "适度拆解，保留关键特征。" : "尽最大可能提取文本中所有描述词。";
-            
-            const systemPrompt = `作为提示词专家，请完成两项任务：
-1. 提取文本中可变要素并结构化归类。提取颗粒度要求：${ruleDetail}
-2. 根据文本内容，精准总结这个prompt的用途。
-JSON 格式绝对规范（必须包含 fileMetadata 和 categories）：
-{
-  "fileMetadata": {
-    "category": "提取2~5个字符的分类说明(如：生图、角色、文案等)",
-    "summary": "10个字以内的内容总结"
-  },
-  "categories": [{"name": "分组名", "replacements": [{"original": "原文词", "varName": "简练中文变量名"}]}]
-}`;
-
+            const rule = granularity === 'coarse' ? "大幅收敛，剔除修饰词。" : granularity === 'medium' ? "适度拆解，保留关键特征。" : "尽最大可能提取文本中所有描述词。";
+            const systemPrompt = `作为提示词专家，请完成两项任务：\n1. 提取文本中可变要素并结构化归类。提取颗粒度要求：${rule}\n2. 根据文本内容，精准总结这个prompt的用途。\nJSON 格式绝对规范（必须包含 fileMetadata 和 categories）：\n{\n  "fileMetadata": {\n    "category": "提取2~5个字符的分类说明(如：生图、角色、文案等)",\n    "summary": "10个字以内的内容总结"\n  },\n  "categories": [{"name": "分组名", "replacements": [{"original": "原文词", "varName": "简练中文变量名"}]}]\n}`;
             try {
-                const response = await fetch(`${state.apiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+                const res = await fetch(`${state.apiConfig.baseUrl.replace(/\/$/,'')}/chat/completions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.apiConfig.key}` },
                     body: JSON.stringify({ model: state.apiConfig.model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: rawText }], response_format: { type: 'json_object' }, temperature: 0.1 }),
                     signal: state.abortController.signal
                 });
-                
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                const data = await response.json();
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                const data = await res.json();
                 const parsed = JSON.parse(data.choices[0].message.content);
-                
-                if (parsed.fileMetadata) {
-                    state.fileMetadata = parsed.fileMetadata;
-                }
-
-                if (parsed.categories && Array.isArray(parsed.categories)) {
-                    state.pendingAiData = parsed.categories;
-                    renderAiResultModal();
-                } else { throw new Error('解析异常'); }
-            } catch (error) {
-                if (error.name !== 'AbortError') showToast('AI 解析失败，请检查网络或 API 配置。', 'error');
-            } finally {
-                clearInterval(loadingStepTimer);
-                dom.aiLoading.classList.add('hidden');
-                state.abortController = null;
-            }
-        }
+                if (parsed.fileMetadata) state.fileMetadata = parsed.fileMetadata;
+                if (parsed.categories && Array.isArray(parsed.categories)) { state.pendingAiData = parsed.categories; renderAiResultModal(); }
+                else throw new Error('解析异常');
+            } catch (err) { if (err.name !== 'AbortError') showToast('AI 解析失败，请检查网络或 API 配置。', 'error'); }
+            finally { clearInterval(window._lt); dom.aiLoading.classList.add('hidden'); state.abortController = null; }
+        };
 
         function renderAiResultModal() {
-            let htmlBuffer = '';
+            let h = '';
             state.pendingAiData.forEach((cat, cIdx) => {
-                if (!cat.replacements || cat.replacements.length === 0) return;
-                const safeCatName = escapeHtml(cat.name);
-                htmlBuffer += `
-                    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-                        <div class="bg-slate-100/50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                            <label class="font-bold text-slate-700 flex items-center gap-2.5 cursor-pointer">
-                                <input type="checkbox" checked class="w-4 h-4 text-emerald-600 border-slate-300 rounded cursor-pointer" onchange="toggleCategoryGroup(${cIdx}, this.checked)">
-                                ${safeCatName}
-                            </label>
-                        </div>
-                        <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">`;
+                if (!cat.replacements || !cat.replacements.length) return;
+                h += `<div class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm"><div class="bg-slate-100/50 px-4 py-3 border-b border-slate-200 flex justify-between items-center"><label class="font-bold text-slate-700 flex items-center gap-2.5 cursor-pointer"><input type="checkbox" checked class="w-4 h-4 text-emerald-600 border-slate-300 rounded cursor-pointer" onchange="window.toggleCategoryGroup(${cIdx}, this.checked)">${escapeHtml(cat.name)}</label></div><div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">`;
                 cat.replacements.forEach((rep, rIdx) => {
-                    const safeVarName = escapeHtml(rep.varName);
-                    const safeOriginal = escapeHtml(rep.original);
-                    htmlBuffer += `
-                        <label class="flex items-start gap-2.5 p-2 rounded-md hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-100 transition-colors group">
-                            <input type="checkbox" checked class="mt-0.5 w-4 h-4 text-emerald-600 border-slate-300 rounded cursor-pointer item-checkbox cidx-${cIdx}" data-cidx="${cIdx}" data-ridx="${rIdx}">
-                            <div class="flex-1 min-w-0">
-                                <div class="font-medium text-slate-700 text-sm">${safeVarName}</div>
-                                <div class="text-xs text-slate-400 mt-0.5 truncate w-full" title="${safeOriginal}">“${safeOriginal}”</div>
-                            </div>
-                        </label>`;
+                    h += `<label class="flex items-start gap-2.5 p-2 rounded-md hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-100 transition-colors group"><input type="checkbox" checked class="mt-0.5 w-4 h-4 text-emerald-600 border-slate-300 rounded cursor-pointer item-checkbox cidx-${cIdx}" data-cidx="${cIdx}" data-ridx="${rIdx}"><div class="flex-1 min-w-0"><div class="font-medium text-slate-700 text-sm">${escapeHtml(rep.varName)}</div><div class="text-xs text-slate-400 mt-0.5 truncate w-full" title="${escapeHtml(rep.original)}">“${escapeHtml(rep.original)}”</div></div></label>`;
                 });
-                htmlBuffer += `</div></div>`;
+                h += `</div></div>`;
             });
-            dom.aiResultContent.innerHTML = htmlBuffer;
+            dom.aiResultContent.innerHTML = h;
             dom.aiResultModal.classList.remove('hidden');
         }
 
-        function toggleCategoryGroup(cIdx, isChecked) {
-            dom.aiResultContent.querySelectorAll(`.cidx-${cIdx}`).forEach(cb => cb.checked = isChecked);
-        }
-
-        function applyAiSelection() {
-            let newTemplate = dom.tpl.innerText || '';
-            let extractedVars = {};
-            
+        window.toggleCategoryGroup = (cIdx, checked) => { dom.aiResultContent.querySelectorAll(`.cidx-${cIdx}`).forEach(cb => cb.checked = checked); };
+        window.applyAiSelection = () => {
+            state.isApplyingAi = true;
+            let tpl = tplEditor.getValue() || '';
+            let vars = {};
             dom.aiResultContent.querySelectorAll('.item-checkbox:checked').forEach(cb => {
                 const item = state.pendingAiData[cb.getAttribute('data-cidx')].replacements[cb.getAttribute('data-ridx')];
-                newTemplate = newTemplate.replaceAll(item.original, `{${item.varName}}`);
-                extractedVars[item.varName] = item.original;
+                tpl = tpl.replaceAll(item.original, `{${item.varName}}`);
+                vars[item.varName] = item.original;
             });
-            
-            dom.tpl.innerText = newTemplate;
-            
-            const sel = window.getSelection();
-            if (dom.tpl.lastChild) {
-                const range = document.createRange();
-                range.selectNodeContents(dom.tpl);
-                range.collapse(false);
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-            
-            updateVars(extractedVars); 
+            tplEditor.setValue(tpl);
+            updateVars(vars);
             closeAiResultModal();
             showToast('变量抽取与命名分析成功！');
-        }
-
-        dom.tpl.addEventListener('paste', function(e) {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || !dom.tpl.contains(selection.anchorNode)) return;
-            
-            e.preventDefault();
-            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-            selection.deleteFromDocument();
-            selection.getRangeAt(0).insertNode(document.createTextNode(text));
-            selection.collapseToEnd();
-            handleTemplateInput();
-        });
-
-        function toggleSync(checkbox) { state.syncEnabled = checkbox.checked; }
-
-        function autoResizeVar(element) {
-            if (!element.value) { element.style.height = '38px'; return; }
-            element.style.height = 'auto';
-            element.style.height = (element.scrollHeight) + 'px';
-        }
-
-        let typingTimer;
-        function handleTemplateInput() {
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(() => { updateVars(); }, 300);
-            state.fileMetadata = null; 
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.size > 2 * 1024 * 1024) return showToast('文件需在 2MB 以内。', 'error');
-            const reader = new FileReader();
-            reader.onload = function(e) { 
-                let content = e.target.result;
-                if (file.name.endsWith('.json')) {
-                    try { const parsed = JSON.parse(content); if(parsed.template) content = parsed.template; } catch(err){}
-                }
-                dom.tpl.innerText = content; 
-                state.fileMetadata = null;
-                updateVars(); 
-                event.target.value = ''; 
-            };
-            reader.readAsText(file);
-        }
-
-        function updateVars(prefillVariables = null) {
-            const tplText = dom.tpl.innerText || '';
-            const matches = [...new Set(tplText.match(/\{([^}]+)\}/g) || [])];
-            
-            const isSameVars = matches.length === state.lastVariables.length && matches.every((val, i) => val === state.lastVariables[i]);
-            
-            if (isSameVars && !prefillVariables) {
-                renderResult();
-                return; 
-            }
-
-            state.lastVariables = matches;
-
-            if (matches.length === 0) {
-                dom.varsContainer.innerHTML = `<div class="flex items-center justify-center text-slate-400 text-sm italic py-4">未检测到 {变量}</div>`;
-                renderResult();
-                return;
-            }
-
-            const currentValues = {};
-            dom.varsContainer.querySelectorAll('textarea').forEach(input => { currentValues[input.id] = input.value; });
-
-            const gridContainer = document.createElement('div');
-            gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4';
-            
-            matches.forEach(m => {
-                const name = m.slice(1, -1);
-                const safeId = generateSafeId(name);
-                let val = currentValues[safeId] || '';
-                if (prefillVariables && prefillVariables[name] !== undefined) val = prefillVariables[name];
-                
-                const safeName = escapeHtml(name);
-                const rawNameSafe = name.replace(/"/g, '&quot;').replace(/'/g, '&#39;'); 
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'group flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm transition-all focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 relative';
-                wrapper.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <label class="font-medium text-slate-600 text-xs break-words">${safeName}</label>
-                        <button class="remove-var-btn opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-0.5" data-name="${rawNameSafe}" data-id="${safeId}" title="点击取消设定">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <textarea id="${safeId}" class="w-full bg-slate-50 border border-slate-100 rounded-md p-1.5 text-sm text-slate-800 focus:outline-none focus:bg-white resize-none overflow-hidden transition-colors min-h-[38px]" rows="1" placeholder="输入内容..." oninput="autoResizeVar(this); renderResult()"></textarea>`;
-                
-                gridContainer.appendChild(wrapper);
-                const ta = wrapper.querySelector('textarea');
-                ta.value = val;
-                setTimeout(() => autoResizeVar(ta), 0);
-            });
-            
-            dom.varsContainer.innerHTML = '';
-            dom.varsContainer.appendChild(gridContainer);
-            renderResult();
-        }
-
-        function renderResult() {
-            const scrollPos = dom.res.scrollTop;
-            const rawTpl = dom.tpl.innerText || '';
-            let htmlResult = escapeHtml(rawTpl);
-            let plainResult = rawTpl;
-
-            if (state.lastVariables.length === 0) {
-                dom.res.innerHTML = htmlResult;
-                dom.res.scrollTop = scrollPos;
-                state.plainTextResult = plainResult;
-                updateCounters();
-                return;
-            }
-
-            const dict = {};
-            state.lastVariables.forEach(m => {
-                const name = m.slice(1, -1);
-                const safeId = generateSafeId(name);
-                const inputElement = document.getElementById(safeId);
-                const val = (inputElement && inputElement.value !== '') ? inputElement.value : m;
-                
-                dict[m] = {
-                    val: val,
-                    safeName: escapeHtml(name),
-                    safeId: safeId,
-                    safeToken: escapeHtml(m),
-                    safeVal: escapeHtml(val)
-                };
-            });
-
-            const patternStr = state.lastVariables.map(escapeRegExp).join('|');
-            if (patternStr) {
-                const pattern = new RegExp(patternStr, 'g');
-                plainResult = plainResult.replace(pattern, (match) => dict[match].val);
-
-                const htmlPatternStr = state.lastVariables.map(m => escapeRegExp(escapeHtml(m))).join('|');
-                const htmlPattern = new RegExp(htmlPatternStr, 'g');
-                htmlResult = htmlResult.replace(htmlPattern, (match) => {
-                    const originalToken = Object.keys(dict).find(k => dict[k].safeToken === match);
-                    if (!originalToken) return match;
-                    const item = dict[originalToken];
-
-                    if (item.val !== originalToken) {
-                        return `<span class="bg-blue-100 text-blue-700 px-1 rounded font-medium mx-0.5 transition-all highlight-var clickable-var target-${item.safeId}" data-varname="${item.safeName}" data-target-id="${item.safeId}">${item.safeVal}</span>`;
-                    } else {
-                        return `<span class="bg-slate-200 text-slate-500 px-1 rounded mx-0.5 border border-slate-300 border-dashed clickable-var target-${item.safeId}" data-target-id="${item.safeId}">${item.safeToken}</span>`;
-                    }
-                });
-            }
-            
-            dom.res.innerHTML = htmlResult;
-            dom.res.scrollTop = scrollPos;
-            state.plainTextResult = plainResult;
-            updateCounters();
-        }
-
-        async function copyResult() {
-            if (!state.plainTextResult) return;
-            try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(state.plainTextResult);
-                } else {
-                    const tempTextArea = document.createElement('textarea');
-                    tempTextArea.value = state.plainTextResult;
-                    document.body.appendChild(tempTextArea);
-                    tempTextArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempTextArea);
-                }
-                dom.copyBtn.classList.replace('bg-slate-800', 'bg-emerald-600');
-                dom.copyBtn.classList.replace('hover:bg-slate-700', 'hover:bg-emerald-500');
-                dom.copyText.innerText = '已复制!';
-                setTimeout(() => {
-                    dom.copyBtn.classList.replace('bg-emerald-600', 'bg-slate-800');
-                    dom.copyBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-slate-700');
-                    dom.copyText.innerText = '复制结果';
-                }, 2000);
-            } catch (err) {
-                showToast('复制失败，请重试。', 'error');
-            }
-        }
-
-        dom.res.addEventListener('click', function(e) {
-            const varEl = e.target.closest('.clickable-var');
-            if (varEl) {
-                const inputEl = document.getElementById(varEl.getAttribute('data-target-id'));
-                if (inputEl) { inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); inputEl.focus(); inputEl.select(); }
-            }
-        });
-
-        dom.res.addEventListener('mouseover', function(e) {
-            if (e.target.classList.contains('highlight-var')) {
-                dom.globalTooltip.innerText = e.target.getAttribute('data-varname');
-                dom.globalTooltip.classList.add('show');
-                const targetRect = e.target.getBoundingClientRect();
-                let topPosition = targetRect.top - dom.globalTooltip.offsetHeight - 6;
-                if (topPosition < 20) topPosition = targetRect.bottom + 6;
-                dom.globalTooltip.style.left = `${targetRect.left + (targetRect.width / 2)}px`;
-                dom.globalTooltip.style.top = `${topPosition}px`;
-            }
-        });
-
-        dom.res.addEventListener('mouseout', function(e) {
-            if (e.target.classList.contains('highlight-var')) dom.globalTooltip.classList.remove('show');
-        });
-
-        dom.tpl.addEventListener('scroll', function() {
-            if (!state.syncEnabled) return;
-            if (!state.isSyncingLeft) {
-                state.isSyncingRight = true;
-                const maxScrollLeft = this.scrollHeight - this.clientHeight;
-                if (maxScrollLeft > 0) dom.res.scrollTop = (this.scrollTop / maxScrollLeft) * (dom.res.scrollHeight - dom.res.clientHeight);
-            }
-            state.isSyncingLeft = false;
-        });
-
-        dom.res.addEventListener('scroll', function() {
-            dom.globalTooltip.classList.remove('show');
-            if (!state.syncEnabled) return;
-            if (!state.isSyncingRight) {
-                state.isSyncingLeft = true;
-                const maxScrollRight = this.scrollHeight - this.clientHeight;
-                if (maxScrollRight > 0) dom.tpl.scrollTop = (this.scrollTop / maxScrollRight) * (dom.tpl.scrollHeight - dom.tpl.clientHeight);
-            }
-            state.isSyncingRight = false;
-        });
-
-        // 初始化时执行一次统计（确保初始状态正确显示）
-        updateCounters();
+            setTimeout(() => { state.isApplyingAi = false; }, 200);
+        };
+    })();
     </script>
 </body>
 </html>
